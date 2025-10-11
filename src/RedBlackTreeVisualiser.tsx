@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Controls } from "@/components/Controls";
 import { RedBlackTree } from "@/core/RedBlackTree";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
 
 export default function RedBlackTreeVisualiser() {
     const [tree, setTree] = useState(() => new RedBlackTree());
@@ -60,8 +61,9 @@ export default function RedBlackTreeVisualiser() {
         <>
             <div className="min-h-screen w-full bg-gradient-to-b from-white to-slate-50 p-4 md:p-6 dark:from-background dark:to-slate-950">
                 <div className="mx-auto max-w-7xl">
-                    <div className="mb-6">
+                    <div className="mb-6 flex items-center justify-between">
                         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Red–Black Tree Visualiser</h1>
+                        <DarkModeToggle />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

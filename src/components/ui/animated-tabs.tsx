@@ -47,7 +47,7 @@ const AnimatedTabsList = React.forwardRef<
             <TabsPrimitive.List
                 ref={listRef} // Attach ref here for measurements
                 className={cn(
-                    "relative flex h-9 items-center justify-center rounded-lg bg-gray-200 p-1 text-muted-foreground w-full",
+                    "relative flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground w-full",
                     className
                 )}
                 {...props}
