@@ -189,9 +189,164 @@ export class RedBlackTree {
         }
     }
 
-    delete(key: number) {
-        // ... Placeholder for your full deletion logic ...
-        console.log(`(Logic) Deleting ${key}`);
+    // Replaces one subtree as a child of its parent with another subtree
+    private transplant(u: TreeNode, v: TreeNode | null): void {
+        if (u.parent === null) {
+            this.root = v;
+        } else if (u === u.parent.left) {
+            u.parent.left = v;
+        } else {
+            u.parent.right = v;
+        }
+        if (v !== null) {
+            v.parent = u.parent;
+        }
+    }
+
+    // Finds the node with the minimum key in a subtree
+    private minimum(node: TreeNode): TreeNode {
+        while (node.left !== null) {
+            node = node.left;
+        }
+        return node;
+    }
+
+    delete(key: number): void {
+        const z = this.find(key);
+        if (z === null) {
+            // Node not in the tree, nothing to do
+            return;
+        }
+
+        let y: TreeNode = z;
+        let yOriginalColor: Color = y.color;
+        let x: TreeNode | null;
+        let xParent: TreeNode | null;
+
+        if (z.left === null) {
+            x = z.right;
+            xParent = z.parent;
+            this.transplant(z, z.right);
+        } else if (z.right === null) {
+            x = z.left;
+            xParent = z.parent;
+            this.transplant(z, z.left);
+        } else {
+            y = this.minimum(z.right);
+            yOriginalColor = y.color;
+            x = y.right;
+
+            if (y.parent === z) {
+                xParent = y;
+                if (x) x.parent = y;
+            } else {
+                xParent = y.parent;
+                this.transplant(y, y.right);
+                y.right = z.right;
+                y.right.parent = y;
+            }
+
+            this.transplant(z, y);
+            y.left = z.left;
+            y.left.parent = y;
+            y.color = z.color;
+        }
+
+        if (yOriginalColor === Color.BLACK) {
+            this.fixupDelete(x, xParent);
+        }
+    }
+
+    private fixupDelete(x: TreeNode | null, xParent: TreeNode | null): void {
+        let current = x;
+        let parentOfCurrent = xParent;
+
+        while (current !== this.root && (current === null || current.color === Color.BLACK)) {
+            if (parentOfCurrent === null) {
+                break;
+            }
+
+            if (current === parentOfCurrent.left) {
+                let sibling = parentOfCurrent.right;
+                if (sibling === null) break;
+
+                // Case 1: Sibling is red
+                if (sibling.color === Color.RED) {
+                    sibling.color = Color.BLACK;
+                    parentOfCurrent.color = Color.RED;
+                    this.leftRotate(parentOfCurrent);
+                    sibling = parentOfCurrent.right;
+                    if (sibling === null) break;
+                }
+
+                const isLeftChildBlack = sibling.left === null || sibling.left.color === Color.BLACK;
+                const isRightChildBlack = sibling.right === null || sibling.right.color === Color.BLACK;
+
+                // Case 2: Sibling's children are both black
+                if (isLeftChildBlack && isRightChildBlack) {
+                    sibling.color = Color.RED;
+                    current = parentOfCurrent;
+                    parentOfCurrent = current.parent;
+                } else {
+                    // Case 3: Sibling's left child is red, right is black
+                    if (isRightChildBlack) {
+                        if (sibling.left) sibling.left.color = Color.BLACK;
+                        sibling.color = Color.RED;
+                        this.rightRotate(sibling);
+                        sibling = parentOfCurrent.right;
+                        if (sibling === null) break;
+                    }
+
+                    // Case 4: Sibling's right child is red
+                    sibling.color = parentOfCurrent.color;
+                    parentOfCurrent.color = Color.BLACK;
+                    if (sibling.right) sibling.right.color = Color.BLACK;
+                    this.leftRotate(parentOfCurrent);
+                    current = this.root; // End loop
+                }
+            } else { // Symmetric cases: current is a right child
+                let sibling = parentOfCurrent.left;
+                if (sibling === null) break;
+
+                // Case 1 (symmetric): Sibling is red
+                if (sibling.color === Color.RED) {
+                    sibling.color = Color.BLACK;
+                    parentOfCurrent.color = Color.RED;
+                    this.rightRotate(parentOfCurrent);
+                    sibling = parentOfCurrent.left;
+                    if (sibling === null) break;
+                }
+
+                const isLeftChildBlack = sibling.left === null || sibling.left.color === Color.BLACK;
+                const isRightChildBlack = sibling.right === null || sibling.right.color === Color.BLACK;
+
+                // Case 2 (symmetric): Sibling's children are both black
+                if (isLeftChildBlack && isRightChildBlack) {
+                    sibling.color = Color.RED;
+                    current = parentOfCurrent;
+                    parentOfCurrent = current.parent;
+                } else {
+                    // Case 3 (symmetric): Sibling's right child is red, left is black
+                    if (isLeftChildBlack) {
+                        if (sibling.right) sibling.right.color = Color.BLACK;
+                        sibling.color = Color.RED;
+                        this.leftRotate(sibling);
+                        sibling = parentOfCurrent.left;
+                        if (sibling === null) break;
+                    }
+
+                    // Case 4 (symmetric): Sibling's left child is red
+                    sibling.color = parentOfCurrent.color;
+                    parentOfCurrent.color = Color.BLACK;
+                    if (sibling.left) sibling.left.color = Color.BLACK;
+                    this.rightRotate(parentOfCurrent);
+                    current = this.root; // End loop
+                }
+            }
+        }
+        if (current !== null) {
+            current.color = Color.BLACK;
+        }
     }
 
     find(key: number): TreeNode | null {
