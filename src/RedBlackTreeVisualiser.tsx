@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Controls } from "@/components/Controls";
 import { RedBlackTree } from "@/core/RedBlackTree";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
+import TreeCanvas from "@/components/TreeCanvas";
 
 export default function RedBlackTreeVisualiser() {
     const [tree, setTree] = useState(() => new RedBlackTree());
@@ -68,9 +69,8 @@ export default function RedBlackTreeVisualiser() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2">
-                            <div className="flex h-[500px] w-full items-center justify-center rounded-xl border bg-card text-card-foreground shadow p-6">
-                                <p className="text-muted-foreground">Animation Area</p>
-                                {/* You can now pass the `tree` state to your canvas component */}
+                            <div className="h-[500px] w-full rounded-xl border bg-card text-card-foreground shadow">
+                                <TreeCanvas tree={tree} />
                             </div>
                         </div>
 

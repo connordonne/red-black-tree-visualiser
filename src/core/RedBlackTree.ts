@@ -3,7 +3,7 @@
 export enum Color { RED, BLACK }
 
 // Using 'TreeNode' to avoid conflicts with the DOM 'Node' type.
-class TreeNode {
+export class TreeNode {
     key: number;
     color: Color;
     parent: TreeNode | null;
