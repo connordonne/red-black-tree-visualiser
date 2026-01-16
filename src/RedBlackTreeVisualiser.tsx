@@ -8,8 +8,10 @@ import { RedBlackTree, type Step } from "@/core/RedBlackTree";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
 import { PseudocodePanel } from "@/components/PseudocodePanel";
+import { MemoryGrid } from "@/components/MemoryGrid";
+import { NodeInspector } from "@/components/NodeInspector";
 import { ANNOTATIONS } from "@/lib/pseudocode";
-import { ViewOptions } from "@/components/ViewOptions"; // Imported ViewOptions
+import { ViewOptions } from "@/components/ViewOptions";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STEP: Step = {
@@ -33,9 +35,13 @@ export default function RedBlackTreeVisualiser() {
 
     // --- View State ---
     const [showTree, setShowTree] = useState(true);
+    const [showMemory, setShowMemory] = useState(false); // Default off
     const [showExplanation, setShowExplanation] = useState(true);
     const [showPseudocode, setShowPseudocode] = useState(true);
     const [showControls, setShowControls] = useState(true);
+
+    // --- Interaction State ---
+    const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
 
     useEffect(() => {
         let timer: number;
@@ -69,6 +75,8 @@ export default function RedBlackTreeVisualiser() {
         setSteps(prev => [...prev, ...stepsWithMeta]);
         setCurrentStepIndex(steps.length);
         setIsPlaying(true);
+        // Clear manual selection when new operation starts to focus on the action
+        setSelectedAddress(null);
     };
 
     function submitInsert() {
@@ -115,11 +123,13 @@ export default function RedBlackTreeVisualiser() {
         setSteps([INITIAL_STEP]);
         setCurrentStepIndex(0);
         setIsPlaying(false);
+        setSelectedAddress(null);
     }
 
     const handleResetAnimation = useCallback(() => {
         setCurrentStepIndex(0);
         setIsPlaying(false);
+        setSelectedAddress(null);
     }, []);
 
     const currentStepData = steps[currentStepIndex] || INITIAL_STEP;
@@ -129,7 +139,6 @@ export default function RedBlackTreeVisualiser() {
         : [];
 
     // --- Layout Logic ---
-    // If both right-column items are hidden, the left column takes full width.
     const isSidebarVisible = showControls || showPseudocode;
 
     return (
@@ -143,6 +152,8 @@ export default function RedBlackTreeVisualiser() {
                             <ViewOptions
                                 showTree={showTree}
                                 setShowTree={setShowTree}
+                                showMemory={showMemory}
+                                setShowMemory={setShowMemory}
                                 showExplanation={showExplanation}
                                 setShowExplanation={setShowExplanation}
                                 showPseudocode={showPseudocode}
@@ -168,6 +179,26 @@ export default function RedBlackTreeVisualiser() {
                                         root={currentStepData.treeState}
                                         highlightedKeys={currentStepData.highlightedNodeKeys}
                                     />
+                                </div>
+                            )}
+
+                            {showMemory && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[350px]">
+                                    <div className="h-full overflow-hidden">
+                                        <MemoryGrid
+                                            root={currentStepData.treeState}
+                                            highlightedKeys={currentStepData.highlightedNodeKeys}
+                                            selectedAddress={selectedAddress}
+                                            onSelectAddress={setSelectedAddress}
+                                        />
+                                    </div>
+                                    <div className="h-full overflow-hidden">
+                                        <NodeInspector
+                                            root={currentStepData.treeState}
+                                            highlightedKeys={currentStepData.highlightedNodeKeys}
+                                            selectedAddress={selectedAddress}
+                                        />
+                                    </div>
                                 </div>
                             )}
 

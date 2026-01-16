@@ -8,6 +8,7 @@ export class TreeNode {
     parent: TreeNode | null;
     left: TreeNode | null;
     right: TreeNode | null;
+    address: number; // Simulated memory address (0-255)
 
     constructor(key: number) {
         this.key = key;
@@ -15,6 +16,8 @@ export class TreeNode {
         this.parent = null;
         this.left = null;
         this.right = null;
+        // Assign a random address between 1 and 255 (0 is reserved for null/nil)
+        this.address = Math.floor(Math.random() * 254) + 1;
     }
 }
 
@@ -23,7 +26,7 @@ export interface Step {
     description: string;
     highlightedNodeKeys: number[];
     pseudocodeLines: number[];
-    operationType?: 'insert' | 'delete'; // Added property
+    operationType?: 'insert' | 'delete';
 }
 
 export class RedBlackTree {
@@ -37,6 +40,7 @@ export class RedBlackTree {
         if (node === null) return null;
         const newNode = new TreeNode(node.key);
         newNode.color = node.color;
+        newNode.address = node.address; // Persist address across clones
         newNode.parent = parent;
         newNode.left = this.cloneNode(node.left, newNode);
         newNode.right = this.cloneNode(node.right, newNode);
