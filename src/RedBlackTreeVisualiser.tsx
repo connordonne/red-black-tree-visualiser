@@ -1,8 +1,8 @@
- // src/RedBlackTreeVisualiser.tsx
+// src/RedBlackTreeVisualiser.tsx
 
 import React, { useState } from "react";
 import { Controls } from "@/components/Controls";
-import { RedBlackTree } from "@/core/RedBlackTree";
+import { RedBlackTree, type Step } from "@/core/RedBlackTree";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
 
@@ -12,49 +12,51 @@ export default function RedBlackTreeVisualiser() {
     const [keyToDelete, setKeyToDelete] = useState("");
     const [keyToFind, setKeyToFind] = useState("");
 
-    // This helper function ensures React detects a state change by creating a new object reference.
-    const updateTreeAndRerender = (mutatingFunction: (tree: RedBlackTree) => void) => {
+    // Helper to log steps for verification
+    const runOperation = (operationName: string, operationFn: (tree: RedBlackTree) => Step[]) => {
         const newTree = tree.clone();
-        mutatingFunction(newTree);
+        const steps = operationFn(newTree);
+        console.group(`Operation: ${operationName}`);
+        console.log("Generated Steps:", steps);
+        steps.forEach((step, index) => {
+            console.log(`Step ${index + 1}: ${step.description}`, step.highlightedNodeKeys);
+        });
+        console.groupEnd();
+
         setTree(newTree);
     };
 
     function submitInsert() {
         if (keyToInsert === "") return;
-        updateTreeAndRerender(currentTree => {
-            currentTree.insert(parseInt(keyToInsert, 10));
-        });
+        runOperation(`Insert ${keyToInsert}`, (t) => t.insert(parseInt(keyToInsert, 10)));
         setKeyToInsert("");
     }
 
     function submitDelete() {
         if (keyToDelete === "") return;
-        updateTreeAndRerender(currentTree => {
-            currentTree.delete(parseInt(keyToDelete, 10));
-        });
+        runOperation(`Delete ${keyToDelete}`, (t) => t.delete(parseInt(keyToDelete, 10)));
         setKeyToDelete("");
     }
 
     function submitFind() {
         if (keyToFind === "") return;
-        // Find is a read-only operation, so no state update is needed unless you want to highlight the found node.
         const foundNode = tree.find(parseInt(keyToFind, 10));
         console.log(foundNode ? `Node ${keyToFind} found.` : `Node ${keyToFind} not in tree.`);
-        // You could add state here to manage a "found node" highlight
         setKeyToFind("");
     }
 
     function onBulkRandom() {
-        updateTreeAndRerender(currentTree => {
-            for (let i = 0; i < 10; i++) {
-                const randomKey = Math.floor(Math.random() * 100);
-                currentTree.insert(randomKey);
-            }
-        });
+        // Bulk random doesn't return steps individually in this loop,
+        // but we update the state once at the end.
+        const newTree = tree.clone();
+        for (let i = 0; i < 10; i++) {
+            const randomKey = Math.floor(Math.random() * 100);
+            newTree.insert(randomKey);
+        }
+        setTree(newTree);
     }
 
     function onClear() {
-        // Create a completely new tree instance
         setTree(new RedBlackTree());
     }
 
