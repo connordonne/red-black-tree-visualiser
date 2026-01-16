@@ -1,6 +1,6 @@
 // src/components/Controls.tsx
 
-import React, { useState } from 'react';
+import React from 'react'; // Removed useState
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedTabs, AnimatedTabsContent, AnimatedTabsList, AnimatedTabsTrigger } from "@/components/ui/animated-tabs";
@@ -19,21 +19,24 @@ interface ControlsProps {
     submitFind: () => void;
     onBulkRandom: () => void;
     onClear: () => void;
+    // New props for controlled tab state
+    activeTab: string;
+    onTabChange: (val: string) => void;
 }
 
 export function Controls({
                              keyToInsert, setKeyToInsert, submitInsert,
                              keyToDelete, setKeyToDelete, submitDelete,
                              keyToFind, setKeyToFind, submitFind,
-                             onBulkRandom, onClear
+                             onBulkRandom, onClear,
+                             activeTab, onTabChange
                          }: ControlsProps) {
-    const [activeTab, setActiveTab] = useState("insert");
 
     return (
         <Card>
             <CardHeader><CardTitle>Controls</CardTitle></CardHeader>
             <CardContent>
-                <AnimatedTabs defaultValue="insert" onValueChange={setActiveTab}>
+                <AnimatedTabs value={activeTab} onValueChange={onTabChange}>
                     <AnimatedTabsList>
                         <AnimatedTabsTrigger value="insert">Insert</AnimatedTabsTrigger>
                         <AnimatedTabsTrigger value="delete">Delete</AnimatedTabsTrigger>

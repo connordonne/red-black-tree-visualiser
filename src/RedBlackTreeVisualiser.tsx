@@ -7,26 +7,29 @@ import { ExplanationBox } from "@/components/ExplanationBox";
 import { RedBlackTree, type Step } from "@/core/RedBlackTree";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
+import { PseudocodePanel } from "@/components/PseudocodePanel";
+import { ANNOTATIONS } from "@/lib/pseudocode";
 
 const INITIAL_STEP: Step = {
     treeState: null,
     description: "Initial State",
-    highlightedNodeKeys: []
+    highlightedNodeKeys: [],
+    pseudocodeLines: []
 };
 
 export default function RedBlackTreeVisualiser() {
-    // Animation State
     const [steps, setSteps] = useState<Step[]>([INITIAL_STEP]);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1000); // ms per step
+    const [playbackSpeed, setPlaybackSpeed] = useState(1000);
 
-    // Form Inputs
     const [keyToInsert, setKeyToInsert] = useState("");
     const [keyToDelete, setKeyToDelete] = useState("");
     const [keyToFind, setKeyToFind] = useState("");
 
-    // --- Animation Loop ---
+    // Lifted state: Track the active tab here
+    const [activeTab, setActiveTab] = useState("insert");
+
     useEffect(() => {
         let timer: number;
         if (isPlaying && currentStepIndex < steps.length - 1) {
@@ -39,33 +42,39 @@ export default function RedBlackTreeVisualiser() {
         return () => clearTimeout(timer);
     }, [isPlaying, currentStepIndex, steps.length, playbackSpeed]);
 
-
-    // --- Core Logic ---
-    const runOperation = (operationFn: (tree: RedBlackTree) => Step[]) => {
+    // Update runOperation to accept an operation type tag
+    const runOperation = (
+        operationFn: (tree: RedBlackTree) => Step[],
+        opType?: 'insert' | 'delete'
+    ) => {
         const lastStep = steps[steps.length - 1];
-
         const reconstruction = new RedBlackTree();
         reconstruction.root = lastStep.treeState;
-
         const workingTree = reconstruction.clone();
-        const newSteps = operationFn(workingTree);
 
+        const newSteps = operationFn(workingTree);
         if (newSteps.length === 0) return;
 
-        setSteps(prev => [...prev, ...newSteps]);
+        // Tag new steps with the operation type
+        const stepsWithMeta = newSteps.map(s => ({
+            ...s,
+            operationType: opType
+        }));
+
+        setSteps(prev => [...prev, ...stepsWithMeta]);
         setCurrentStepIndex(steps.length);
         setIsPlaying(true);
     };
 
     function submitInsert() {
         if (keyToInsert === "") return;
-        runOperation((t) => t.insert(parseInt(keyToInsert, 10)));
+        runOperation((t) => t.insert(parseInt(keyToInsert, 10)), 'insert');
         setKeyToInsert("");
     }
 
     function submitDelete() {
         if (keyToDelete === "") return;
-        runOperation((t) => t.delete(parseInt(keyToDelete, 10)));
+        runOperation((t) => t.delete(parseInt(keyToDelete, 10)), 'delete');
         setKeyToDelete("");
     }
 
@@ -77,13 +86,16 @@ export default function RedBlackTreeVisualiser() {
             return [{
                 treeState: t.clone().root,
                 description: node ? `Node ${val} found.` : `Node ${val} not found.`,
-                highlightedNodeKeys: node ? [node.key] : []
+                highlightedNodeKeys: node ? [node.key] : [],
+                pseudocodeLines: []
             }];
         });
         setKeyToFind("");
     }
 
     function onBulkRandom() {
+        // Switch view to 'insert' so user sees the relevant code
+        setActiveTab('insert');
         runOperation((t) => {
             const bulkSteps: Step[] = [];
             for (let i = 0; i < 10; i++) {
@@ -92,7 +104,7 @@ export default function RedBlackTreeVisualiser() {
                 bulkSteps.push(...opSteps);
             }
             return bulkSteps;
-        });
+        }, 'insert');
     }
 
     function onClear() {
@@ -108,6 +120,15 @@ export default function RedBlackTreeVisualiser() {
 
     const currentStepData = steps[currentStepIndex] || INITIAL_STEP;
 
+    // Determine pseudocode mode based on active tab
+    const pseudocodeMode = activeTab === 'delete' ? 'delete' : 'insert';
+
+    // Only render highlights if the current animation step matches the active tab's mode.
+    // e.g., If we are on the 'Delete' tab, but the animation is showing an 'Insert' step, don't highlight lines.
+    const activeLinesToRender = (currentStepData.operationType === pseudocodeMode)
+        ? currentStepData.pseudocodeLines
+        : [];
+
     return (
         <>
             <div className="min-h-screen w-full bg-gradient-to-b from-white to-slate-50 p-4 md:p-6 dark:from-background dark:to-slate-950">
@@ -119,7 +140,6 @@ export default function RedBlackTreeVisualiser() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 flex flex-col gap-4">
-                            {/* Visualization Canvas */}
                             <div className="h-[450px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
                                 <TreeCanvas
                                     root={currentStepData.treeState}
@@ -127,14 +147,12 @@ export default function RedBlackTreeVisualiser() {
                                 />
                             </div>
 
-                            {/* New Explanation Box */}
                             <ExplanationBox
                                 description={currentStepData.description}
                                 currentStep={currentStepIndex + 1}
                                 totalSteps={steps.length}
                             />
 
-                            {/* Player Controls */}
                             <PlayerControls
                                 isPlaying={isPlaying}
                                 onPlayPause={() => setIsPlaying(!isPlaying)}
@@ -150,8 +168,7 @@ export default function RedBlackTreeVisualiser() {
                             />
                         </div>
 
-                        {/* Input Controls */}
-                        <div className="lg:col-span-1">
+                        <div className="lg:col-span-1 flex flex-col gap-4">
                             <Controls
                                 keyToInsert={keyToInsert}
                                 setKeyToInsert={setKeyToInsert}
@@ -164,7 +181,18 @@ export default function RedBlackTreeVisualiser() {
                                 submitFind={submitFind}
                                 onBulkRandom={onBulkRandom}
                                 onClear={onClear}
+                                activeTab={activeTab}
+                                onTabChange={setActiveTab}
                             />
+
+                            <div className="flex-1 min-h-[400px]">
+                                <PseudocodePanel
+                                    mode={pseudocodeMode}
+                                    activeLineNumbers={activeLinesToRender} // Use filtered lines
+                                    annotations={ANNOTATIONS[pseudocodeMode]}
+                                    className="h-full"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
