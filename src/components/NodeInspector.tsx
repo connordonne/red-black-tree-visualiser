@@ -19,7 +19,6 @@ export function NodeInspector({ root, highlightedKeys, selectedAddress }: NodeIn
         let foundNode: TreeNode | null = null;
         let isManualSelection = false;
 
-        const stack = root ? [root] : [];
 
         // Helper to traverse and find
         const findByAddress = (addr: number) => {
