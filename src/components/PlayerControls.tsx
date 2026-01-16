@@ -23,6 +23,7 @@ interface PlayerControlsProps {
     onEnd: () => void;
     onReset: () => void;
     currentStep: number;
+    setCurrentStep: (step: number) => void;
     totalSteps: number;
     speed: number;
     setSpeed: (speed: number) => void;
@@ -37,59 +38,76 @@ export function PlayerControls({
                                    onEnd,
                                    onReset,
                                    currentStep,
+                                   setCurrentStep,
                                    totalSteps,
                                    speed,
                                    setSpeed,
                                }: PlayerControlsProps) {
     return (
-        <Card>
-            <CardContent className="p-4">
+        <Card className="border-t-4 border-t-primary/20">
+            <CardContent className="p-4 space-y-4">
+                {/* Timeline Scrubber */}
+                <div className="flex flex-col gap-2">
+                    <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                        <span>Start</span>
+                        <span>Timeline ({currentStep} / {Math.max(0, totalSteps - 1)})</span>
+                        <span>End</span>
+                    </div>
+                    <Slider
+                        min={0}
+                        max={Math.max(0, totalSteps - 1)}
+                        step={1}
+                        value={[currentStep]}
+                        onValueChange={(val) => setCurrentStep(val[0])}
+                        className="cursor-pointer"
+                    />
+                </div>
+
                 <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
                     {/* Playback Controls */}
                     <div className="flex items-center gap-1 order-2 sm:order-1">
-                        <Button variant="ghost" size="icon" onClick={onStart} disabled={currentStep === 0} title="First Step">
+                        <Button variant="ghost" size="icon" onClick={onStart} disabled={currentStep === 0} title="First Step (Home)">
                             <SkipBack className="size-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={onPrev} disabled={currentStep === 0} title="Previous Step">
+                        <Button variant="ghost" size="icon" onClick={onPrev} disabled={currentStep === 0} title="Previous Step (Left Arrow)">
                             <ChevronLeft className="size-4" />
                         </Button>
                         <Button
                             variant={isPlaying ? "secondary" : "default"}
                             size="icon"
                             onClick={onPlayPause}
-                            className="mx-1"
-                            title={isPlaying ? "Pause" : "Play"}
+                            className="mx-1 shadow-md hover:scale-105 transition-transform"
+                            title={isPlaying ? "Pause (Space)" : "Play (Space)"}
                         >
-                            {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+                            {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 fill-current" />}
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={onNext} disabled={currentStep >= totalSteps - 1} title="Next Step">
+                        <Button variant="ghost" size="icon" onClick={onNext} disabled={currentStep >= totalSteps - 1} title="Next Step (Right Arrow)">
                             <ChevronRight className="size-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={onEnd} disabled={currentStep >= totalSteps - 1} title="Last Step">
+                        <Button variant="ghost" size="icon" onClick={onEnd} disabled={currentStep >= totalSteps - 1} title="Last Step (End)">
                             <SkipForward className="size-4" />
                         </Button>
                     </div>
 
                     <div className="flex items-center gap-4 w-full sm:w-auto flex-1 sm:flex-none order-1 sm:order-2">
-                        {/* Reset Button */}
-                        <Button variant="outline" size="sm" onClick={onReset} className="h-8 gap-1.5 ml-auto sm:ml-0">
-                            <RotateCcw className="size-3.5" />
-                            <span className="sr-only sm:not-sr-only">Restart</span>
-                        </Button>
-
                         {/* Speed Slider */}
-                        <div className="flex items-center gap-2 flex-1 min-w-[120px]">
-                            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Speed</span>
+                        <div className="flex items-center gap-2 flex-1 min-w-[120px] bg-muted/30 p-1.5 rounded-lg border border-border/50">
+                            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap px-1">Speed</span>
                             <Slider
                                 min={100}
                                 max={2000}
                                 step={100}
-                                // Invert value for slider (left = slow/high ms, right = fast/low ms)
-                                value={2100 - speed}
-                                onChange={(e) => setSpeed(2100 - parseInt(e.target.value))}
+                                value={[2100 - speed]}
+                                onValueChange={(e) => setSpeed(2100 - e[0])}
                                 className="flex-1"
                             />
                         </div>
+
+                        {/* Reset Button */}
+                        <Button variant="outline" size="sm" onClick={onReset} className="h-9 gap-1.5 ml-auto sm:ml-0 text-muted-foreground hover:text-foreground">
+                            <RotateCcw className="size-3.5" />
+                            <span className="sr-only sm:not-sr-only">Reset</span>
+                        </Button>
                     </div>
                 </div>
             </CardContent>

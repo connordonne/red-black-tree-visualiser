@@ -21,29 +21,29 @@ while z.p.color == RED
     if z.p == z.p.p.left
         y = z.p.p.right
         if y.color == RED
-            z.p.color = BLACK            // Case 1
-            y.color = BLACK              // Case 1
-            z.p.p.color = RED            // Case 1
-            z = z.p.p                    // Case 1
+            z.p.color = BLACK           
+            y.color = BLACK            
+            z.p.p.color = RED           
+            z = z.p.p                 
         else if z == z.p.right
-                z = z.p                  // Case 2
-                LEFT-ROTATE(T, z)        // Case 2
-            z.p.color = BLACK            // Case 3
-            z.p.p.color = RED            // Case 3
-            RIGHT-ROTATE(T, z.p.p)       // Case 3
-    else (same as then clause with "right" and "left" exchanged)
+                z = z.p                 
+                LEFT-ROTATE(T, z)     
+            z.p.color = BLACK          
+            z.p.p.color = RED          
+            RIGHT-ROTATE(T, z.p.p)      
+    else 
         y = z.p.p.left
         if y.color == RED
-            z.p.color = BLACK            // Case 1
-            y.color = BLACK              // Case 1
-            z.p.p.color = RED            // Case 1
-            z = z.p.p                    // Case 1
+            z.p.color = BLACK           
+            y.color = BLACK            
+            z.p.p.color = RED           
+            z = z.p.p                  
         else if z == z.p.left
-                z = z.p                  // Case 2
-                RIGHT-ROTATE(T, z)       // Case 2
-            z.p.color = BLACK            // Case 3
-            z.p.p.color = RED            // Case 3
-            LEFT-ROTATE(T, z.p.p)        // Case 3
+                z = z.p                 
+                RIGHT-ROTATE(T, z)      
+            z.p.color = BLACK           
+            z.p.p.color = RED          
+            LEFT-ROTATE(T, z.p.p)        
 T.root.color = BLACK`;
 
 export const INSERT_ANNOTATIONS: Record<number, string> = {

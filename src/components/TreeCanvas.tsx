@@ -7,12 +7,23 @@ import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink }
 interface TreeCanvasProps {
     root: TreeNode | null;
     highlightedKeys?: number[];
+    colorBlindMode?: boolean;
+    showAddresses?: boolean;
+    hoveredAddress?: number | null;
+    onHoverAddress?: (addr: number | null) => void;
 }
 
-const NODE_RADIUS = 20;
+const NODE_RADIUS = 22; // Slightly larger for better touch target
 const VERTICAL_MARGIN = 50;
 
-const TreeCanvas: React.FC<TreeCanvasProps> = ({ root, highlightedKeys = [] }) => {
+const TreeCanvas: React.FC<TreeCanvasProps> = ({
+                                                   root,
+                                                   highlightedKeys = [],
+                                                   colorBlindMode = false,
+                                                   showAddresses = false,
+                                                   hoveredAddress = null,
+                                                   onHoverAddress
+                                               }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -45,11 +56,12 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ root, highlightedKeys = [] }) =
     const linkKey = (d: RBTHierarchyPointLink) => `link-${d.source.data.key}-${d.target.data.key}`;
 
     const transition = { type: 'spring', stiffness: 300, damping: 30 };
+    const toHex = (n: number) => `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
 
     return (
-        <div ref={containerRef} className="h-full w-full relative overflow-hidden">
+        <div ref={containerRef} className="h-full w-full relative overflow-hidden bg-dot-pattern">
             {root ? (
-                <svg width={dimensions.width} height={dimensions.height} className="overflow-visible block">
+                <svg width={dimensions.width} height={dimensions.height} className="overflow-visible block select-none">
                     <g transform={`translate(0, ${VERTICAL_MARGIN})`}>
                         {/* Links Layer */}
                         <AnimatePresence>
@@ -66,7 +78,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ root, highlightedKeys = [] }) =
                                     transition={transition}
                                     stroke="var(--muted-foreground)"
                                     strokeWidth={2}
-                                    strokeOpacity={0.5}
+                                    strokeOpacity={0.4}
                                     fill="none"
                                 />
                             ))}
@@ -76,6 +88,9 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ root, highlightedKeys = [] }) =
                         <AnimatePresence>
                             {nodes.map((node) => {
                                 const isHighlighted = highlightedKeys.includes(node.data.key);
+                                const isHovered = hoveredAddress === node.data.address;
+                                const isRed = node.data.color === Color.RED;
+
                                 return (
                                     <motion.g
                                         key={nodeKey(node)}
@@ -83,8 +98,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ root, highlightedKeys = [] }) =
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.5 }}
                                         transition={transition}
+                                        onMouseEnter={() => onHoverAddress?.(node.data.address)}
+                                        onMouseLeave={() => onHoverAddress?.(null)}
+                                        className="cursor-pointer"
                                     >
-                                        {/* Highlight Ring */}
+                                        {/* Highlight Ring (Algorithmic) */}
                                         {isHighlighted && (
                                             <motion.circle
                                                 cx={node.x}
@@ -99,25 +117,41 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ root, highlightedKeys = [] }) =
                                             />
                                         )}
 
+                                        {/* Hover Ring (Interaction) */}
+                                        {isHovered && (
+                                            <motion.circle
+                                                cx={node.x}
+                                                cy={node.y}
+                                                r={NODE_RADIUS + 4}
+                                                fill="none"
+                                                stroke="var(--primary)"
+                                                strokeWidth={2}
+                                                strokeDasharray="4 4"
+                                            />
+                                        )}
+
                                         <motion.circle
                                             r={NODE_RADIUS}
                                             animate={{ cx: node.x, cy: node.y }}
                                             transition={transition}
-                                            fill={node.data.color === Color.RED ? 'var(--destructive)' : 'var(--foreground)'}
-                                            stroke="var(--primary)"
-                                            strokeWidth={2}
+                                            fill={isRed ? 'var(--destructive)' : 'var(--foreground)'}
+                                            stroke="var(--background)"
+                                            // Accessibility: Dashed stroke for RED in ColorBlind mode
+                                            strokeWidth={colorBlindMode ? 3 : 2}
+                                            strokeDasharray={colorBlindMode && isRed ? "4 3" : "none"}
                                             className="drop-shadow-sm"
                                         />
+
                                         <motion.text
                                             textAnchor="middle"
                                             dy=".3em"
                                             animate={{ x: node.x, y: node.y }}
                                             transition={transition}
-                                            fill={node.data.color === Color.RED ? 'var(--destructive-foreground)' : 'var(--background)'}
-                                            className="font-bold text-sm select-none pointer-events-none"
-                                            style={{ fontSize: '12px' }}
+                                            fill={isRed ? 'var(--destructive-foreground)' : 'var(--background)'}
+                                            className="font-bold text-sm pointer-events-none font-mono"
+                                            style={{ fontSize: showAddresses ? '10px' : '12px' }}
                                         >
-                                            {node.data.key}
+                                            {showAddresses ? toHex(node.data.address) : node.data.key}
                                         </motion.text>
                                     </motion.g>
                                 );
