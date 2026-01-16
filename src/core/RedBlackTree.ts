@@ -19,6 +19,13 @@ export class TreeNode {
     }
 }
 
+// Step interface for animation
+export interface Step {
+    treeState: TreeNode | null; // Snapshot of the tree root
+    description: string;
+    highlightedNodeKeys: number[];
+}
+
 export class RedBlackTree {
     root: TreeNode | null;
 
@@ -48,10 +55,21 @@ export class RedBlackTree {
         return newTree;
     }
 
-    private leftRotate(x: TreeNode): void {
+    // Helper to capture a snapshot step
+    private addStep(steps: Step[], description: string, highlightedNodeKeys: number[]) {
+        steps.push({
+            treeState: this.cloneNode(this.root, null),
+            description,
+            highlightedNodeKeys
+        });
+    }
+
+    private getColorName(color: Color): string {
+        return color === Color.RED ? "RED" : "BLACK";
+    }
+
+    private leftRotate(x: TreeNode, steps: Step[]): void {
         const y = x.right;
-        // This check should not be strictly necessary if the tree logic is correct,
-        // but it prevents runtime errors.
         if (!y) return;
 
         x.right = y.left;
@@ -70,9 +88,11 @@ export class RedBlackTree {
 
         y.left = x;
         x.parent = y;
+
+        this.addStep(steps, `Left rotate around ${x.key}`, [x.key, y.key]);
     }
 
-    private rightRotate(y: TreeNode): void {
+    private rightRotate(y: TreeNode, steps: Step[]): void {
         const x = y.left;
         if (!x) return;
 
@@ -92,100 +112,109 @@ export class RedBlackTree {
 
         x.right = y;
         y.parent = x;
+
+        this.addStep(steps, `Right rotate around ${y.key}`, [y.key, x.key]);
     }
 
-    insert(key: number): void {
-        const z = new TreeNode(key);
+    insert(key: number): Step[] {
+        const steps: Step[] = [];
+        // Initial snapshot
+        // this.addStep(steps, `Starting insert of ${key}`, []);
 
+        const z = new TreeNode(key);
         let y: TreeNode | null = null;
         let x: TreeNode | null = this.root;
 
         // Standard BST insert
         while (x !== null) {
             y = x;
+            this.addStep(steps, `Comparing ${key} with ${x.key}`, [x.key]);
+
             if (z.key < x.key) {
                 x = x.left;
             } else if (z.key > x.key) {
                 x = x.right;
             } else {
-                // Key already exists, do nothing.
-                return;
+                this.addStep(steps, `Key ${key} already exists.`, [x.key]);
+                return steps;
             }
         }
 
         z.parent = y;
         if (y === null) {
             this.root = z; // Tree was empty
+            this.addStep(steps, `Tree empty. Inserted ${key} as root (BLACK).`, [z.key]);
         } else if (z.key < y.key) {
             y.left = z;
+            this.addStep(steps, `${key} < ${y.key}. Inserted ${key} as left child of ${y.key}.`, [z.key, y.key]);
         } else {
             y.right = z;
+            this.addStep(steps, `${key} > ${y.key}. Inserted ${key} as right child of ${y.key}.`, [z.key, y.key]);
         }
 
         // New node is red, fix any violations
-        this.fixupInsert(z);
+        this.fixupInsert(z, steps);
+
+        return steps;
     }
 
-    private fixupInsert(z: TreeNode): void {
-        // Loop as long as the parent of the current node 'z' is RED.
-        // This indicates a "red-red" violation.
+    private fixupInsert(z: TreeNode, steps: Step[]): void {
         while (z.parent?.color === Color.RED) {
-            // The grandparent must exist because the parent is RED, and the root must be BLACK.
             const grandparent = z.parent.parent;
-            if (!grandparent) {
-                // This case is a safeguard; it implies the parent is the root, which should be black.
-                // The loop should terminate, and the final step will fix the root's color.
-                break;
-            }
+            if (!grandparent) break;
 
-            // Case A: The parent is a LEFT child
+            const highlightKeys = [z.key, z.parent.key, grandparent.key];
+
             if (z.parent === grandparent.left) {
                 const uncle = grandparent.right;
-                // Case 1: The uncle is RED.
-                // Action: Recolor parent, uncle, and grandparent. Move 'z' up to the grandparent.
                 if (uncle?.color === Color.RED) {
+                    // Case 1
+                    this.addStep(steps, "Parent and Uncle are RED. Recolor Parent/Uncle to BLACK, Grandparent to RED.", [...highlightKeys, uncle.key]);
                     z.parent.color = Color.BLACK;
                     uncle.color = Color.BLACK;
                     grandparent.color = Color.RED;
                     z = grandparent;
                 } else {
-                    // Case 2: The uncle is BLACK, and 'z' is a RIGHT child (triangle shape).
-                    // Action: Left rotate on the parent to transform into Case 3.
+                    // Case 2
                     if (z === z.parent.right) {
+                        this.addStep(steps, "Uncle is BLACK. Triangle shape (Left-Right). Rotate Left on Parent.", highlightKeys);
                         z = z.parent;
-                        this.leftRotate(z);
+                        this.leftRotate(z, steps);
                     }
-                    // Case 3: The uncle is BLACK, and 'z' is a LEFT child (line shape).
-                    // Action: Recolor parent and grandparent, then right rotate on the grandparent.
-                    z.parent!.color = Color.BLACK; // z.parent is guaranteed to exist here
-                    grandparent.color = Color.RED;
-                    this.rightRotate(grandparent);
-                }
-            } else { // Case B: The parent is a RIGHT child (symmetric to Case A)
-                const uncle = grandparent.left;
-                // Case 4: The uncle is RED.
-                if (uncle?.color === Color.RED) {
-                    z.parent.color = Color.BLACK;
-                    uncle.color = Color.BLACK;
-                    grandparent.color = Color.RED;
-                    z = grandparent;
-                } else {
-                    // Case 5: The uncle is BLACK, and 'z' is a LEFT child (triangle).
-                    if (z === z.parent.left) {
-                        z = z.parent;
-                        this.rightRotate(z);
-                    }
-                    // Case 6: The uncle is BLACK, and 'z' is a RIGHT child (line).
+                    // Case 3
+                    this.addStep(steps, "Uncle is BLACK. Line shape (Left-Left). Recolor Parent BLACK, Grandparent RED. Rotate Right on Grandparent.", [z.key, z.parent!.key, grandparent.key]);
                     z.parent!.color = Color.BLACK;
                     grandparent.color = Color.RED;
-                    this.leftRotate(grandparent);
+                    this.rightRotate(grandparent, steps);
+                }
+            } else { // Symmetric Case B
+                const uncle = grandparent.left;
+                if (uncle?.color === Color.RED) {
+                    // Case 4
+                    this.addStep(steps, "Parent and Uncle are RED. Recolor Parent/Uncle to BLACK, Grandparent to RED.", [...highlightKeys, uncle.key]);
+                    z.parent.color = Color.BLACK;
+                    uncle.color = Color.BLACK;
+                    grandparent.color = Color.RED;
+                    z = grandparent;
+                } else {
+                    // Case 5
+                    if (z === z.parent.left) {
+                        this.addStep(steps, "Uncle is BLACK. Triangle shape (Right-Left). Rotate Right on Parent.", highlightKeys);
+                        z = z.parent;
+                        this.rightRotate(z, steps);
+                    }
+                    // Case 6
+                    this.addStep(steps, "Uncle is BLACK. Line shape (Right-Right). Recolor Parent BLACK, Grandparent RED. Rotate Left on Grandparent.", [z.key, z.parent!.key, grandparent.key]);
+                    z.parent!.color = Color.BLACK;
+                    grandparent.color = Color.RED;
+                    this.leftRotate(grandparent, steps);
                 }
             }
         }
 
-        // Property 2: The root of the tree is always black.
-        if (this.root !== null) {
+        if (this.root && this.root.color !== Color.BLACK) {
             this.root.color = Color.BLACK;
+            this.addStep(steps, "Ensure Root is BLACK.", [this.root.key]);
         }
     }
 
@@ -211,12 +240,17 @@ export class RedBlackTree {
         return node;
     }
 
-    delete(key: number): void {
+    delete(key: number): Step[] {
+        const steps: Step[] = [];
+        this.addStep(steps, `Searching for node ${key} to delete.`, []);
+
         const z = this.find(key);
         if (z === null) {
-            // Node not in the tree, nothing to do
-            return;
+            this.addStep(steps, `Node ${key} not found.`, []);
+            return steps;
         }
+
+        this.addStep(steps, `Found node ${key}.`, [z.key]);
 
         let y: TreeNode = z;
         let yOriginalColor: Color = y.color;
@@ -226,15 +260,19 @@ export class RedBlackTree {
         if (z.left === null) {
             x = z.right;
             xParent = z.parent;
+            this.addStep(steps, `Node ${z.key} has no left child. Replacing with right child.`, [z.key]);
             this.transplant(z, z.right);
         } else if (z.right === null) {
             x = z.left;
             xParent = z.parent;
+            this.addStep(steps, `Node ${z.key} has no right child. Replacing with left child.`, [z.key]);
             this.transplant(z, z.left);
         } else {
             y = this.minimum(z.right);
             yOriginalColor = y.color;
             x = y.right;
+
+            this.addStep(steps, `Node ${z.key} has two children. Successor is ${y.key}.`, [z.key, y.key]);
 
             if (y.parent === z) {
                 xParent = y;
@@ -250,14 +288,21 @@ export class RedBlackTree {
             y.left = z.left;
             y.left.parent = y;
             y.color = z.color;
+
+            this.addStep(steps, `Replaced ${z.key} with successor ${y.key}. Copied color ${this.getColorName(z.color)}.`, [y.key]);
         }
 
         if (yOriginalColor === Color.BLACK) {
-            this.fixupDelete(x, xParent);
+            this.addStep(steps, "Original color was BLACK. Fixing up violations...", []);
+            this.fixupDelete(x, xParent, steps);
+        } else {
+            this.addStep(steps, "Original color was RED. No fixup needed.", []);
         }
+
+        return steps;
     }
 
-    private fixupDelete(x: TreeNode | null, xParent: TreeNode | null): void {
+    private fixupDelete(x: TreeNode | null, xParent: TreeNode | null, steps: Step[]): void {
         let current = x;
         let parentOfCurrent = xParent;
 
@@ -266,15 +311,19 @@ export class RedBlackTree {
                 break;
             }
 
+            const highlightBase = parentOfCurrent ? [parentOfCurrent.key] : [];
+            if (current) highlightBase.push(current.key);
+
             if (current === parentOfCurrent.left) {
                 let sibling = parentOfCurrent.right;
                 if (sibling === null) break;
 
                 // Case 1: Sibling is red
                 if (sibling.color === Color.RED) {
+                    this.addStep(steps, "Sibling is RED. Recolor Sibling BLACK, Parent RED. Rotate Left.", [...highlightBase, sibling.key]);
                     sibling.color = Color.BLACK;
                     parentOfCurrent.color = Color.RED;
-                    this.leftRotate(parentOfCurrent);
+                    this.leftRotate(parentOfCurrent, steps);
                     sibling = parentOfCurrent.right;
                     if (sibling === null) break;
                 }
@@ -284,35 +333,39 @@ export class RedBlackTree {
 
                 // Case 2: Sibling's children are both black
                 if (isLeftChildBlack && isRightChildBlack) {
+                    this.addStep(steps, "Sibling's children are BLACK. Recolor Sibling to RED.", [...highlightBase, sibling.key]);
                     sibling.color = Color.RED;
                     current = parentOfCurrent;
                     parentOfCurrent = current.parent;
                 } else {
                     // Case 3: Sibling's left child is red, right is black
                     if (isRightChildBlack) {
+                        this.addStep(steps, "Sibling's Right Child is BLACK (Left Red). Recolor Sibling Left Child BLACK, Sibling RED. Rotate Right on Sibling.", [...highlightBase, sibling.key]);
                         if (sibling.left) sibling.left.color = Color.BLACK;
                         sibling.color = Color.RED;
-                        this.rightRotate(sibling);
+                        this.rightRotate(sibling, steps);
                         sibling = parentOfCurrent.right;
                         if (sibling === null) break;
                     }
 
                     // Case 4: Sibling's right child is red
+                    this.addStep(steps, "Sibling's Right Child is RED. Recolor Sibling to Parent Color, Parent BLACK, Sibling Right Child BLACK. Rotate Left.", [...highlightBase, sibling.key]);
                     sibling.color = parentOfCurrent.color;
                     parentOfCurrent.color = Color.BLACK;
                     if (sibling.right) sibling.right.color = Color.BLACK;
-                    this.leftRotate(parentOfCurrent);
+                    this.leftRotate(parentOfCurrent, steps);
                     current = this.root; // End loop
                 }
-            } else { // Symmetric cases: current is a right child
+            } else { // Symmetric cases
                 let sibling = parentOfCurrent.left;
                 if (sibling === null) break;
 
-                // Case 1 (symmetric): Sibling is red
+                // Case 1 (symmetric)
                 if (sibling.color === Color.RED) {
+                    this.addStep(steps, "Sibling is RED. Recolor Sibling BLACK, Parent RED. Rotate Right.", [...highlightBase, sibling.key]);
                     sibling.color = Color.BLACK;
                     parentOfCurrent.color = Color.RED;
-                    this.rightRotate(parentOfCurrent);
+                    this.rightRotate(parentOfCurrent, steps);
                     sibling = parentOfCurrent.left;
                     if (sibling === null) break;
                 }
@@ -320,26 +373,29 @@ export class RedBlackTree {
                 const isLeftChildBlack = sibling.left === null || sibling.left.color === Color.BLACK;
                 const isRightChildBlack = sibling.right === null || sibling.right.color === Color.BLACK;
 
-                // Case 2 (symmetric): Sibling's children are both black
+                // Case 2 (symmetric)
                 if (isLeftChildBlack && isRightChildBlack) {
+                    this.addStep(steps, "Sibling's children are BLACK. Recolor Sibling to RED.", [...highlightBase, sibling.key]);
                     sibling.color = Color.RED;
                     current = parentOfCurrent;
                     parentOfCurrent = current.parent;
                 } else {
-                    // Case 3 (symmetric): Sibling's right child is red, left is black
+                    // Case 3 (symmetric)
                     if (isLeftChildBlack) {
+                        this.addStep(steps, "Sibling's Left Child is BLACK (Right Red). Recolor Sibling Right Child BLACK, Sibling RED. Rotate Left on Sibling.", [...highlightBase, sibling.key]);
                         if (sibling.right) sibling.right.color = Color.BLACK;
                         sibling.color = Color.RED;
-                        this.leftRotate(sibling);
+                        this.leftRotate(sibling, steps);
                         sibling = parentOfCurrent.left;
                         if (sibling === null) break;
                     }
 
-                    // Case 4 (symmetric): Sibling's left child is red
+                    // Case 4 (symmetric)
+                    this.addStep(steps, "Sibling's Left Child is RED. Recolor Sibling to Parent Color, Parent BLACK, Sibling Left Child BLACK. Rotate Right.", [...highlightBase, sibling.key]);
                     sibling.color = parentOfCurrent.color;
                     parentOfCurrent.color = Color.BLACK;
                     if (sibling.left) sibling.left.color = Color.BLACK;
-                    this.rightRotate(parentOfCurrent);
+                    this.rightRotate(parentOfCurrent, steps);
                     current = this.root; // End loop
                 }
             }
