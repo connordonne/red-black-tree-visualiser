@@ -9,6 +9,8 @@ import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
 import { PseudocodePanel } from "@/components/PseudocodePanel";
 import { ANNOTATIONS } from "@/lib/pseudocode";
+import { ViewOptions } from "@/components/ViewOptions"; // Imported ViewOptions
+import { cn } from "@/lib/utils";
 
 const INITIAL_STEP: Step = {
     treeState: null,
@@ -27,8 +29,13 @@ export default function RedBlackTreeVisualiser() {
     const [keyToDelete, setKeyToDelete] = useState("");
     const [keyToFind, setKeyToFind] = useState("");
 
-    // Lifted state: Track the active tab here
     const [activeTab, setActiveTab] = useState("insert");
+
+    // --- View State ---
+    const [showTree, setShowTree] = useState(true);
+    const [showExplanation, setShowExplanation] = useState(true);
+    const [showPseudocode, setShowPseudocode] = useState(true);
+    const [showControls, setShowControls] = useState(true);
 
     useEffect(() => {
         let timer: number;
@@ -42,7 +49,6 @@ export default function RedBlackTreeVisualiser() {
         return () => clearTimeout(timer);
     }, [isPlaying, currentStepIndex, steps.length, playbackSpeed]);
 
-    // Update runOperation to accept an operation type tag
     const runOperation = (
         operationFn: (tree: RedBlackTree) => Step[],
         opType?: 'insert' | 'delete'
@@ -55,7 +61,6 @@ export default function RedBlackTreeVisualiser() {
         const newSteps = operationFn(workingTree);
         if (newSteps.length === 0) return;
 
-        // Tag new steps with the operation type
         const stepsWithMeta = newSteps.map(s => ({
             ...s,
             operationType: opType
@@ -94,7 +99,6 @@ export default function RedBlackTreeVisualiser() {
     }
 
     function onBulkRandom() {
-        // Switch view to 'insert' so user sees the relevant code
         setActiveTab('insert');
         runOperation((t) => {
             const bulkSteps: Step[] = [];
@@ -119,15 +123,14 @@ export default function RedBlackTreeVisualiser() {
     }, []);
 
     const currentStepData = steps[currentStepIndex] || INITIAL_STEP;
-
-    // Determine pseudocode mode based on active tab
     const pseudocodeMode = activeTab === 'delete' ? 'delete' : 'insert';
-
-    // Only render highlights if the current animation step matches the active tab's mode.
-    // e.g., If we are on the 'Delete' tab, but the animation is showing an 'Insert' step, don't highlight lines.
     const activeLinesToRender = (currentStepData.operationType === pseudocodeMode)
         ? currentStepData.pseudocodeLines
         : [];
+
+    // --- Layout Logic ---
+    // If both right-column items are hidden, the left column takes full width.
+    const isSidebarVisible = showControls || showPseudocode;
 
     return (
         <>
@@ -135,23 +138,46 @@ export default function RedBlackTreeVisualiser() {
                 <div className="mx-auto max-w-7xl">
                     <div className="mb-6 flex items-center justify-between">
                         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Red–Black Tree Visualiser</h1>
-                        <DarkModeToggle />
+
+                        <div className="flex items-center gap-2">
+                            <ViewOptions
+                                showTree={showTree}
+                                setShowTree={setShowTree}
+                                showExplanation={showExplanation}
+                                setShowExplanation={setShowExplanation}
+                                showPseudocode={showPseudocode}
+                                setShowPseudocode={setShowPseudocode}
+                                showControls={showControls}
+                                setShowControls={setShowControls}
+                            />
+                            <DarkModeToggle />
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 flex flex-col gap-4">
-                            <div className="h-[450px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
-                                <TreeCanvas
-                                    root={currentStepData.treeState}
-                                    highlightedKeys={currentStepData.highlightedNodeKeys}
-                                />
-                            </div>
+                    <div className={cn(
+                        "gap-6 transition-all duration-300",
+                        isSidebarVisible ? "grid grid-cols-1 lg:grid-cols-3" : "flex flex-col"
+                    )}>
+                        <div className={cn(
+                            "flex flex-col gap-4 transition-all duration-300",
+                            isSidebarVisible ? "lg:col-span-2" : "w-full"
+                        )}>
+                            {showTree && (
+                                <div className="h-[450px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
+                                    <TreeCanvas
+                                        root={currentStepData.treeState}
+                                        highlightedKeys={currentStepData.highlightedNodeKeys}
+                                    />
+                                </div>
+                            )}
 
-                            <ExplanationBox
-                                description={currentStepData.description}
-                                currentStep={currentStepIndex + 1}
-                                totalSteps={steps.length}
-                            />
+                            {showExplanation && (
+                                <ExplanationBox
+                                    description={currentStepData.description}
+                                    currentStep={currentStepIndex + 1}
+                                    totalSteps={steps.length}
+                                />
+                            )}
 
                             <PlayerControls
                                 isPlaying={isPlaying}
@@ -168,32 +194,38 @@ export default function RedBlackTreeVisualiser() {
                             />
                         </div>
 
-                        <div className="lg:col-span-1 flex flex-col gap-4">
-                            <Controls
-                                keyToInsert={keyToInsert}
-                                setKeyToInsert={setKeyToInsert}
-                                submitInsert={submitInsert}
-                                keyToDelete={keyToDelete}
-                                setKeyToDelete={setKeyToDelete}
-                                submitDelete={submitDelete}
-                                keyToFind={keyToFind}
-                                setKeyToFind={setKeyToFind}
-                                submitFind={submitFind}
-                                onBulkRandom={onBulkRandom}
-                                onClear={onClear}
-                                activeTab={activeTab}
-                                onTabChange={setActiveTab}
-                            />
+                        {isSidebarVisible && (
+                            <div className="lg:col-span-1 flex flex-col gap-4">
+                                {showControls && (
+                                    <Controls
+                                        keyToInsert={keyToInsert}
+                                        setKeyToInsert={setKeyToInsert}
+                                        submitInsert={submitInsert}
+                                        keyToDelete={keyToDelete}
+                                        setKeyToDelete={setKeyToDelete}
+                                        submitDelete={submitDelete}
+                                        keyToFind={keyToFind}
+                                        setKeyToFind={setKeyToFind}
+                                        submitFind={submitFind}
+                                        onBulkRandom={onBulkRandom}
+                                        onClear={onClear}
+                                        activeTab={activeTab}
+                                        onTabChange={setActiveTab}
+                                    />
+                                )}
 
-                            <div className="flex-1 min-h-[400px]">
-                                <PseudocodePanel
-                                    mode={pseudocodeMode}
-                                    activeLineNumbers={activeLinesToRender} // Use filtered lines
-                                    annotations={ANNOTATIONS[pseudocodeMode]}
-                                    className="h-full"
-                                />
+                                {showPseudocode && (
+                                    <div className="flex-1 min-h-[400px]">
+                                        <PseudocodePanel
+                                            mode={pseudocodeMode}
+                                            activeLineNumbers={activeLinesToRender}
+                                            annotations={ANNOTATIONS[pseudocodeMode]}
+                                            className="h-full"
+                                        />
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
