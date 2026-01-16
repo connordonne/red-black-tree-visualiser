@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Controls } from "@/components/Controls";
-import { RedBlackTree } from "@/core/RedBlackTree";
+import { RedBlackTree, type Step } from "@/core/RedBlackTree";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
 
@@ -13,10 +13,9 @@ export default function RedBlackTreeVisualiser() {
     const [keyToFind, setKeyToFind] = useState("");
 
     // Helper to log steps for verification
-    const runOperation = (operationName: string, operationFn: (tree: RedBlackTree) => any[]) => {
+    const runOperation = (operationName: string, operationFn: (tree: RedBlackTree) => Step[]) => {
         const newTree = tree.clone();
         const steps = operationFn(newTree);
-
         console.group(`Operation: ${operationName}`);
         console.log("Generated Steps:", steps);
         steps.forEach((step, index) => {
