@@ -26,7 +26,6 @@ interface PlayerControlsProps {
     totalSteps: number;
     speed: number;
     setSpeed: (speed: number) => void;
-    description: string;
 }
 
 export function PlayerControls({
@@ -41,24 +40,13 @@ export function PlayerControls({
                                    totalSteps,
                                    speed,
                                    setSpeed,
-                                   description
                                }: PlayerControlsProps) {
     return (
         <Card>
-            <CardContent className="p-4 flex flex-col gap-4">
-                {/* Status Bar */}
-                <div className="flex items-center justify-between text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
-                    <span className="font-medium text-foreground">
-                        Step {currentStep + 1} / {totalSteps}
-                    </span>
-                    <span className="truncate ml-4 flex-1 text-right" title={description}>
-                        {description || "Ready"}
-                    </span>
-                </div>
-
+            <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
                     {/* Playback Controls */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 order-2 sm:order-1">
                         <Button variant="ghost" size="icon" onClick={onStart} disabled={currentStep === 0} title="First Step">
                             <SkipBack className="size-4" />
                         </Button>
@@ -82,7 +70,7 @@ export function PlayerControls({
                         </Button>
                     </div>
 
-                    <div className="flex items-center gap-4 w-full sm:w-auto flex-1 sm:flex-none">
+                    <div className="flex items-center gap-4 w-full sm:w-auto flex-1 sm:flex-none order-1 sm:order-2">
                         {/* Reset Button */}
                         <Button variant="outline" size="sm" onClick={onReset} className="h-8 gap-1.5 ml-auto sm:ml-0">
                             <RotateCcw className="size-3.5" />
