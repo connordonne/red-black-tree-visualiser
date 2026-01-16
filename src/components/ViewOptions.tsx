@@ -16,6 +16,8 @@ interface ViewOptionsProps {
     setShowPseudocode: (val: boolean) => void
     showControls: boolean
     setShowControls: (val: boolean) => void
+    showMemory: boolean
+    setShowMemory: (val: boolean) => void
 }
 
 export function ViewOptions({
@@ -27,6 +29,8 @@ export function ViewOptions({
                                 setShowPseudocode,
                                 showControls,
                                 setShowControls,
+                                showMemory,
+                                setShowMemory
                             }: ViewOptionsProps) {
     const [isOpen, setIsOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
@@ -64,6 +68,11 @@ export function ViewOptions({
                         <div className="flex items-center justify-between">
                             <Label htmlFor="view-tree" className="cursor-pointer">Tree Canvas</Label>
                             <Switch id="view-tree" checked={showTree} onCheckedChange={setShowTree} />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="view-mem" className="cursor-pointer">Memory View</Label>
+                            <Switch id="view-mem" checked={showMemory} onCheckedChange={setShowMemory} />
                         </div>
 
                         <div className="flex items-center justify-between">
