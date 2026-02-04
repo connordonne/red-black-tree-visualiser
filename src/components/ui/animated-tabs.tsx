@@ -45,26 +45,37 @@ const AnimatedTabsList = React.forwardRef<
             <TabsPrimitive.List
                 ref={listRef}
                 className={cn(
-                    // UPDATED: Darker background for the track so the white tab pops more
-                    "relative flex h-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 p-1 text-muted-foreground w-full",
+                    // Base Layout
+                    "relative flex h-9 items-center justify-center rounded-lg p-1 text-muted-foreground w-full",
+                    
+                    // --- UPDATED CONTAINER STYLES ---
+                    // Background: Solid distinct grey/black
+                    "bg-slate-100 dark:bg-slate-950",
+                    
+                    // Depth: Inner shadow makes it look like a "slot"
+                    "shadow-inner",
+                    
+                    // The Pop: A distinct ring around the outside of the container
+                    "ring-1 ring-slate-300/50 dark:ring-slate-700",
+                    
                     className
                 )}
                 {...props}
             >
-                {/* The sliding indicator */}
+                {/* The sliding indicator (Kept the style you liked) */}
                 <motion.div
                     layout
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     className={cn(
-                        "absolute left-0 top-1 bottom-1 rounded-md shadow-sm z-0",
-                        // UPDATED: Pure white bg for light mode, brighter grey for dark mode
-                        // Added border for extra definition
-                        "bg-white dark:bg-slate-600 border border-slate-200/50 dark:border-slate-500/50"
+                        "absolute left-0 top-1 bottom-1 rounded-md z-0",
+                        "bg-white dark:bg-slate-800",
+                        "shadow-[0_2px_10px_rgba(0,0,0,0.1)]",
+                        "ring-1 ring-primary/30 dark:ring-primary/50",
+                        "border border-slate-200 dark:border-slate-700"
                     )}
                     style={{ 
                         left: indicatorStyle.left, 
                         width: indicatorStyle.width,
-                        // Ensure it fits vertically within the padding
                         height: 'calc(100% - 8px)',
                         top: '4px'
                     }}
@@ -93,9 +104,9 @@ const AnimatedTabsTrigger = React.forwardRef<
             ref={ref}
             className={cn(
                 "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-                // UPDATED: Text colors. 
-                // data-[state=active]:text-primary makes the text dark/bold when selected
-                "text-slate-500 dark:text-slate-400 data-[state=active]:text-primary data-[state=active]:font-semibold",
+                "text-slate-500 dark:text-slate-400",
+                // Kept the text pop you liked
+                "data-[state=active]:text-primary dark:data-[state=active]:text-white data-[state=active]:font-bold",
                 className
             )}
             onClick={(e) => {

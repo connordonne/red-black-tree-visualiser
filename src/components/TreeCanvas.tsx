@@ -5,7 +5,7 @@ import * as d3 from 'd3';
 import { TreeNode, Color } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, Minimize2 } from "lucide-react";
 import { cn } from '@/lib/utils';
 
 interface TreeCanvasProps {
@@ -15,6 +15,7 @@ interface TreeCanvasProps {
     showAddresses?: boolean;
     hoveredAddress?: number | null;
     onHoverAddress?: (addr: number | null) => void;
+    onResetContainerSize?: () => void;
 }
 
 const NODE_RADIUS = 22;
@@ -25,7 +26,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    colorBlindMode = false,
                                                    showAddresses = false,
                                                    hoveredAddress = null,
-                                                   onHoverAddress
+                                                   onHoverAddress,
+                                                   onResetContainerSize
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -195,6 +197,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={zoomToFit} title="Fit to View">
                     <Maximize className="size-4" />
                 </Button>
+                {onResetContainerSize && (
+                    <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={onResetContainerSize} title="Reset Container Size">
+                        <Minimize2 className="size-4" />
+                    </Button>
+                )}
             </div>
 
             {root ? (
@@ -263,21 +270,21 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 strokeDasharray="4 4"
                                             />
                                         )}
+                                        
                                         <circle
                                             r={NODE_RADIUS}
-                                            fill={isRed ? 'var(--destructive)' : 'var(--foreground)'}
-                                            // CHANGED: Use --card color for stroke to blend with the card background
-                                            stroke="var(--card)"
-                                            strokeWidth={colorBlindMode ? 3 : 2}
+                                            className="drop-shadow-sm transition-all duration-300"
+                                            fill={isRed ? 'var(--destructive)' : '#1e293b'}
+                                            stroke={isRed ? 'var(--card)' : 'rgba(255, 255, 255, 0.6)'}
+                                            strokeWidth={2}
                                             strokeDasharray={colorBlindMode && isRed ? "4 3" : "none"}
-                                            className="drop-shadow-sm"
                                         />
                                         <text
                                             textAnchor="middle"
                                             dy=".3em"
-                                            fill={isRed ? 'var(--destructive-foreground)' : 'var(--background)'}
                                             className="font-bold text-sm pointer-events-none font-mono"
                                             style={{ fontSize: showAddresses ? '10px' : '12px' }}
+                                            fill="#ffffff"
                                         >
                                             {showAddresses ? toHex(node.data.address) : node.data.key}
                                         </text>

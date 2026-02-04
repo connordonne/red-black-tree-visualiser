@@ -1,6 +1,6 @@
 // src/RedBlackTreeVisualiser.tsx
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
     DndContext,
     closestCorners,
@@ -26,6 +26,8 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
+import { animate } from "framer-motion";
+
 import { Controls } from "@/components/Controls";
 import { PlayerControls } from "@/components/PlayerControls";
 import { ExplanationBox } from "@/components/ExplanationBox";
@@ -39,6 +41,7 @@ import { ANNOTATIONS } from "@/lib/pseudocode";
 import { ViewOptions } from "@/components/ViewOptions";
 import { cn } from "@/lib/utils";
 import { SortableItem } from "@/components/SortableItem";
+import { Shield, BookOpen } from "lucide-react"; // Added Shield icon for UofG logo vibe
 
 const INITIAL_STEP: Step = {
     treeState: null,
@@ -88,16 +91,19 @@ export default function RedBlackTreeVisualiser() {
 
     // --- Drag & Drop Layout State ---
     const [columns, setColumns] = useState<{ main: WidgetId[]; sidebar: WidgetId[] }>({
-        main: ['tree', 'memory', 'explanation', 'player'],
-        sidebar: ['controls', 'pseudocode'],
+        main: ['tree', 'memory', 'player'],
+        sidebar: ['controls', 'explanation', 'pseudocode'],
     });
     const [activeDragId, setActiveDragId] = useState<WidgetId | null>(null);
+
+    // --- Refs ---
+    const treeContainerRef = useRef<HTMLDivElement>(null);
 
     // --- Sensors for DnD ---
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Require 8px movement before drag starts (prevents accidental clicks)
+                distance: 8, 
             },
         }),
         useSensor(KeyboardSensor, {
@@ -105,7 +111,6 @@ export default function RedBlackTreeVisualiser() {
         })
     );
 
-    // --- Keyboard Shortcuts ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
@@ -119,7 +124,6 @@ export default function RedBlackTreeVisualiser() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [steps.length]);
 
-    // --- Animation Loop ---
     useEffect(() => {
         let timer: number;
         if (isPlaying && currentStepIndex < steps.length - 1) {
@@ -130,7 +134,6 @@ export default function RedBlackTreeVisualiser() {
         return () => clearTimeout(timer);
     }, [isPlaying, currentStepIndex, steps.length, playbackSpeed]);
 
-    // --- Operations ---
     const runOperation = (operationFn: (tree: RedBlackTree) => Step[], opType?: 'insert' | 'delete') => {
         const lastStep = steps[steps.length - 1];
         const reconstruction = new RedBlackTree();
@@ -175,6 +178,26 @@ export default function RedBlackTreeVisualiser() {
     function onClear() { setSteps([INITIAL_STEP]); setCurrentStepIndex(0); setIsPlaying(false); setSelectedAddress(null); }
     const handleResetAnimation = useCallback(() => { setCurrentStepIndex(0); setIsPlaying(false); setSelectedAddress(null); }, []);
 
+    // --- Animate Reset ---
+    const resetTreeSize = useCallback(() => {
+        if (treeContainerRef.current) {
+            const element = treeContainerRef.current;
+            const startHeight = element.offsetHeight;
+
+            // Explicitly set 'from' value to ensure animation triggers correctly every time
+            animate(element, { height: [startHeight, 554] }, {
+                type: "spring",
+                stiffness: 250,
+                damping: 25,
+                onComplete: () => {
+                    // Remove inline styles to return to CSS class control
+                    element.style.height = '';
+                    element.style.width = ''; 
+                }
+            });
+        }
+    }, []);
+
     const currentStepData = steps[currentStepIndex] || INITIAL_STEP;
     const pseudocodeMode = activeTab === 'delete' ? 'delete' : 'insert';
     
@@ -182,7 +205,7 @@ export default function RedBlackTreeVisualiser() {
         return (currentStepData.operationType === pseudocodeMode) ? currentStepData.pseudocodeLines : [];
     }, [currentStepData, pseudocodeMode]);
 
-    // --- Drag & Drop Handlers ---
+    // --- Drag & Drop Helpers ---
     const findContainer = (id: WidgetId) => {
         if (columns.main.includes(id)) return 'main';
         if (columns.sidebar.includes(id)) return 'sidebar';
@@ -270,7 +293,7 @@ export default function RedBlackTreeVisualiser() {
         setActiveDragId(null);
     };
 
-    // --- Widget Rendering Helper ---
+    // --- Widget Rendering ---
     const renderWidget = (id: WidgetId) => {
         const isVisible = {
             tree: showTree,
@@ -287,8 +310,7 @@ export default function RedBlackTreeVisualiser() {
         switch (id) {
             case 'tree':
                 content = (
-                    // HEIGHT: 554px (Matches Controls + Code + Gap)
-                    <div className="h-[554px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative resize-y min-h-[300px] [&::-webkit-resizer]:bg-transparent">
+                    <div ref={treeContainerRef} className="h-[554px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative resize-y min-h-[300px] [&::-webkit-resizer]:bg-transparent">
                         <TreeCanvas
                             root={currentStepData.treeState}
                             highlightedKeys={currentStepData.highlightedNodeKeys}
@@ -296,6 +318,7 @@ export default function RedBlackTreeVisualiser() {
                             showAddresses={showAddresses}
                             hoveredAddress={hoveredAddress}
                             onHoverAddress={setHoveredAddress}
+                            onResetContainerSize={resetTreeSize}
                         />
                         
                         <ResizeHandle />
@@ -307,7 +330,8 @@ export default function RedBlackTreeVisualiser() {
                                 <span>Red Node</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full border-2 border-foreground bg-foreground/20" />
+                                <div className="flex items-center justify-center w-3 h-3 rounded-full border-2 border-[var(--foreground)] bg-[var(--primary)]/20">
+                                </div>
                                 <span>Black Node</span>
                             </div>
                             {showAddresses && <div className="text-[10px] text-muted-foreground mt-1">Showing Memory Addrs</div>}
@@ -341,34 +365,40 @@ export default function RedBlackTreeVisualiser() {
                 break;
             case 'explanation':
                 content = (
-                    <ExplanationBox
-                        description={currentStepData.description}
-                        currentStep={currentStepIndex + 1}
-                        totalSteps={steps.length}
-                    />
+                    <div className="h-[85px] w-full">
+                        <ExplanationBox
+                            description={currentStepData.description}
+                            currentStep={currentStepIndex + 1}
+                            totalSteps={steps.length}
+                            className="h-full"
+                        />
+                    </div>
                 );
                 break;
             case 'player':
                 content = (
-                    <PlayerControls
-                        isPlaying={isPlaying}
-                        onPlayPause={() => setIsPlaying(!isPlaying)}
-                        onNext={() => setCurrentStepIndex(i => Math.min(steps.length - 1, i + 1))}
-                        onPrev={() => setCurrentStepIndex(i => Math.max(0, i - 1))}
-                        onStart={() => setCurrentStepIndex(0)}
-                        onEnd={() => setCurrentStepIndex(steps.length - 1)}
-                        onReset={handleResetAnimation}
-                        currentStep={currentStepIndex}
-                        setCurrentStep={setCurrentStepIndex}
-                        totalSteps={steps.length}
-                        speed={playbackSpeed}
-                        setSpeed={setPlaybackSpeed}
-                    />
+                    // FIXED HEIGHT: 144px
+                    <div className="h-[85px] w-full">
+                        <PlayerControls
+                            isPlaying={isPlaying}
+                            onPlayPause={() => setIsPlaying(!isPlaying)}
+                            onNext={() => setCurrentStepIndex(i => Math.min(steps.length - 1, i + 1))}
+                            onPrev={() => setCurrentStepIndex(i => Math.max(0, i - 1))}
+                            onStart={() => setCurrentStepIndex(0)}
+                            onEnd={() => setCurrentStepIndex(steps.length - 1)}
+                            onReset={handleResetAnimation}
+                            currentStep={currentStepIndex}
+                            setCurrentStep={setCurrentStepIndex}
+                            totalSteps={steps.length}
+                            speed={playbackSpeed}
+                            setSpeed={setPlaybackSpeed}
+                            className="h-full"
+                        />
+                    </div>
                 );
                 break;
             case 'controls':
                 content = (
-                    // HEIGHT: 154px
                     <div className="h-[154px] w-full">
                         <Controls
                             keyToInsert={keyToInsert}
@@ -391,7 +421,6 @@ export default function RedBlackTreeVisualiser() {
                 break;
             case 'pseudocode':
                 content = (
-                    // HEIGHT: 384px (Calculated: 554 - 154 - 16 = 384)
                     <div className="h-[384px] w-full">
                         <PseudocodePanel
                             mode={pseudocodeMode}
@@ -411,16 +440,31 @@ export default function RedBlackTreeVisualiser() {
         );
     };
 
-    const visibleMainWidgets = columns.main.filter(id => id === 'player' || (id === 'tree' && showTree) || (id === 'memory' && showMemory) || (id === 'explanation' && showExplanation) || (id === 'controls' && showControls) || (id === 'pseudocode' && showPseudocode));
-    const visibleSidebarWidgets = columns.sidebar.filter(id => id === 'player' || (id === 'tree' && showTree) || (id === 'memory' && showMemory) || (id === 'explanation' && showExplanation) || (id === 'controls' && showControls) || (id === 'pseudocode' && showPseudocode));
-    const isSidebarVisible = visibleSidebarWidgets.length > 0;
+    const isSidebarVisible = columns.sidebar.filter(id => id === 'player' || (id === 'tree' && showTree) || (id === 'memory' && showMemory) || (id === 'explanation' && showExplanation) || (id === 'controls' && showControls) || (id === 'pseudocode' && showPseudocode)).length > 0;
 
     return (
         <>
-            <div className="min-h-screen w-full bg-background p-4 md:p-6">
+            <div className="min-h-screen w-full bg-background p-4 md:p-6 pb-12 relative z-10">
                 <div className="mx-auto max-w-7xl">
+                    {/* --- HEADER SECTION --- */}
                     <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-4 relative z-50">
-                        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Red–Black Tree Visualiser</h1>
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
+                            {/* UofG Crest / Shield Icon */}
+                            <img 
+                                src="/uofg-crest.png" 
+                                alt="University of Glasgow Crest" 
+                                className="h-12 w-auto md:h-14 object-contain drop-shadow-md"
+                            />
+                            <div className="flex flex-col">
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                                    UofG Red–Black Tree Visualiser
+                                </h1>
+                                <span className="text-muted-foreground font-serif italic text-sm tracking-wide">
+                                    Via, Veritas, Vita
+                                </span>
+                            </div>
+                        </div>
+
                         <div className="flex items-center gap-2 bg-card/50 p-1.5 rounded-lg border shadow-sm backdrop-blur-sm relative z-50">
                             <ViewOptions
                                 showTree={showTree}
@@ -454,7 +498,6 @@ export default function RedBlackTreeVisualiser() {
                             "gap-6 transition-all duration-300 relative z-0",
                             isSidebarVisible ? "grid grid-cols-1 lg:grid-cols-3" : "flex flex-col"
                         )}>
-                            {/* Main Column */}
                             <div className={cn(
                                 "flex flex-col gap-4 transition-all duration-300",
                                 isSidebarVisible ? "lg:col-span-2" : "w-full"
@@ -468,7 +511,6 @@ export default function RedBlackTreeVisualiser() {
                                 </SortableContext>
                             </div>
 
-                            {/* Sidebar Column */}
                             {isSidebarVisible && (
                                 <div className="lg:col-span-1 flex flex-col gap-4">
                                     <SortableContext
@@ -482,20 +524,25 @@ export default function RedBlackTreeVisualiser() {
                             )}
                         </div>
 
-                        {/* Drag Overlay for smooth visual feedback */}
                         <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.5' } } }) }}>
                             {activeDragId ? (
                                 <div className="opacity-80 rotate-2 scale-[1.02]">
-                                    {/* Simplified drag overlay representation */}
+                                    {/* Placeholder */}
                                 </div>
                             ) : null}
                         </DragOverlay>
                     </DndContext>
                 </div>
             </div>
-            <footer className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
-                <span className="bg-background/80 p-1 rounded backdrop-blur">
-                    Connor Peter Donnelly – University of Glasgow – Level 4 Dissertation Project © 2025
+
+            {/* --- FOOTER --- */}
+            <footer className="fixed bottom-4 right-4 z-50 text-[11px] md:text-xs text-muted-foreground opacity-60 hover:opacity-100 transition-opacity pointer-events-none">
+                <span className="bg-background/80 border border-border/50 p-1.5 px-3 rounded-lg backdrop-blur shadow-sm inline-flex items-center gap-2">
+                    <span className="font-semibold text-foreground">Connor Donnelly</span>
+                    <span className="hidden sm:inline w-px h-3 bg-border" />
+                    <span className="hidden sm:inline">University of Glasgow</span>
+                    <span className="hidden sm:inline w-px h-3 bg-border" />
+                    <span className="hidden sm:inline">Level 4 Dissertation Project © 2025</span>
                 </span>
             </footer>
         </>
