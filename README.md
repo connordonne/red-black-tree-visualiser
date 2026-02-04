@@ -153,10 +153,6 @@ This visualizer is particularly useful for:
 
 This project is developed as an educational tool for the University of Glasgow.
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
 ## Acknowledgments
 
 - University of Glasgow Computer Science Department
