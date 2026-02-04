@@ -57,8 +57,10 @@ export function PlayerControls({
                         min={0}
                         max={Math.max(0, totalSteps - 1)}
                         step={1}
-                        value={[currentStep]}
-                        onValueChange={(val) => setCurrentStep(val[0])}
+                        // FIX: Pass a single number, not an array
+                        value={currentStep} 
+                        // FIX: Use standard onChange event and parse the string value to int
+                        onChange={(e) => setCurrentStep(parseInt(e.target.value))} 
                         className="cursor-pointer"
                     />
                 </div>
@@ -97,8 +99,10 @@ export function PlayerControls({
                                 min={100}
                                 max={2000}
                                 step={100}
-                                value={[2100 - speed]}
-                                onValueChange={(e) => setSpeed(2100 - e[0])}
+                                // FIX: Pass single number
+                                value={2100 - speed} 
+                                // FIX: Parse event value
+                                onChange={(e) => setSpeed(2100 - parseInt(e.target.value))}
                                 className="flex-1"
                             />
                         </div>

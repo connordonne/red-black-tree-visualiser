@@ -1,9 +1,10 @@
 // src/RedBlackTreeVisualiser.tsx
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
     DndContext,
     closestCorners,
+    pointerWithin,
     KeyboardSensor,
     PointerSensor,
     useSensor,
@@ -12,7 +13,6 @@ import {
     defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 
-// FIX: Import types separately using "import type"
 import type {
     DragStartEvent,
     DragOverEvent,
@@ -151,8 +151,10 @@ export default function RedBlackTreeVisualiser() {
         });
         setKeyToFind("");
     }
+    
     function onBulkRandom() {
-        setActiveTab('insert');
+        // REMOVED: setActiveTab('insert'); 
+        // This keeps the user on the "More" tab while running the insert operations.
         runOperation(t => {
             const bulkSteps: Step[] = [];
             for (let i = 0; i < 10; i++) {
@@ -161,12 +163,16 @@ export default function RedBlackTreeVisualiser() {
             return bulkSteps;
         }, 'insert');
     }
+    
     function onClear() { setSteps([INITIAL_STEP]); setCurrentStepIndex(0); setIsPlaying(false); setSelectedAddress(null); }
     const handleResetAnimation = useCallback(() => { setCurrentStepIndex(0); setIsPlaying(false); setSelectedAddress(null); }, []);
 
     const currentStepData = steps[currentStepIndex] || INITIAL_STEP;
     const pseudocodeMode = activeTab === 'delete' ? 'delete' : 'insert';
-    const activeLinesToRender = (currentStepData.operationType === pseudocodeMode) ? currentStepData.pseudocodeLines : [];
+    
+    const activeLinesToRender = useMemo(() => {
+        return (currentStepData.operationType === pseudocodeMode) ? currentStepData.pseudocodeLines : [];
+    }, [currentStepData, pseudocodeMode]);
 
     // --- Drag & Drop Handlers ---
     const findContainer = (id: WidgetId) => {
@@ -185,7 +191,6 @@ export default function RedBlackTreeVisualiser() {
         const overId = over.id as string;
 
         const activeContainer = findContainer(activeId);
-        // If over a container directly (empty column case), use its id, else find item's container
         const overContainer = (overId === 'main' || overId === 'sidebar')
             ? overId
             : findContainer(overId as WidgetId);
@@ -263,7 +268,7 @@ export default function RedBlackTreeVisualiser() {
             tree: showTree,
             memory: showMemory,
             explanation: showExplanation,
-            player: true, // Always show player if in list
+            player: true,
             controls: showControls,
             pseudocode: showPseudocode,
         }[id];
@@ -370,7 +375,7 @@ export default function RedBlackTreeVisualiser() {
                 break;
             case 'pseudocode':
                 content = (
-                    <div className="flex-1 min-h-[400px]">
+                    <div className="h-[450px] w-full">
                         <PseudocodePanel
                             mode={pseudocodeMode}
                             activeLineNumbers={activeLinesToRender}
@@ -389,7 +394,6 @@ export default function RedBlackTreeVisualiser() {
         );
     };
 
-    // Calculate effective visibility of columns to adjust grid layout
     const visibleMainWidgets = columns.main.filter(id => id === 'player' || (id === 'tree' && showTree) || (id === 'memory' && showMemory) || (id === 'explanation' && showExplanation) || (id === 'controls' && showControls) || (id === 'pseudocode' && showPseudocode));
     const visibleSidebarWidgets = columns.sidebar.filter(id => id === 'player' || (id === 'tree' && showTree) || (id === 'memory' && showMemory) || (id === 'explanation' && showExplanation) || (id === 'controls' && showControls) || (id === 'pseudocode' && showPseudocode));
     const isSidebarVisible = visibleSidebarWidgets.length > 0;
@@ -424,7 +428,7 @@ export default function RedBlackTreeVisualiser() {
 
                     <DndContext
                         sensors={sensors}
-                        collisionDetection={closestCorners}
+                        collisionDetection={pointerWithin}
                         onDragStart={handleDragStart}
                         onDragOver={handleDragOver}
                         onDragEnd={handleDragEnd}
@@ -465,13 +469,7 @@ export default function RedBlackTreeVisualiser() {
                         <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.5' } } }) }}>
                             {activeDragId ? (
                                 <div className="opacity-80 rotate-2 scale-[1.02]">
-                                    {/* Render a simplified version or the actual component for the overlay.
-                                        Rendering the actual component ensures WYSIWYG dragging. */}
-                                    {/* Note: We need to strip the SortableItem wrapper logic here basically,
-                                        but since renderWidget returns a SortableItem, we can't easily unwrap it
-                                        without refactoring. However, dnd-kit overlays usually just need the visual content.
-                                        For simplicity in this specific setup, we can re-call renderWidget.
-                                        In production, we might want a lighter placeholder. */}
+                                    {/* Simplified drag overlay representation */}
                                 </div>
                             ) : null}
                         </DragOverlay>

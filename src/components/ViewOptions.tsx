@@ -93,7 +93,7 @@ export function ViewOptions({
                         <div>
                             <div className="flex items-center gap-2 mb-3 text-primary">
                                 <Eye className="size-4" />
-                                <h4 className="font-medium text-sm">Panel Visibility</h4>
+                                <h4 className="font-medium text-sm">Widget Visibility</h4>
                             </div>
                             <div className="grid gap-3">
                                 <div className="flex items-center justify-between">

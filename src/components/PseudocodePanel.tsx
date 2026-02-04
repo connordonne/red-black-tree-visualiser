@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, Terminal, Info } from 'lucide-react';
+import { Copy, Check, Terminal, Info, ArrowDownCircle, MousePointer2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ALGORITHMS } from '@/lib/pseudocode';
 
@@ -65,6 +65,7 @@ export function PseudocodePanel({
                                 }: PseudocodePanelProps) {
     const [copied, setCopied] = useState(false);
     const [debugLine, setDebugLine] = useState<number | null>(null);
+    const [autoScroll, setAutoScroll] = useState(true); // Control flag for scrolling
 
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -73,22 +74,44 @@ export function PseudocodePanel({
     const codeString = ALGORITHMS[mode] || "// Algorithm code not found.";
     const lines = useMemo(() => codeString.split('\n'), [codeString]);
 
-    const currentHighlights = activeLineNumbers.length > 0 ? activeLineNumbers : (debugLine ? [debugLine] : []);
+    const currentHighlights = useMemo(() => {
+        return activeLineNumbers.length > 0 ? activeLineNumbers : (debugLine ? [debugLine] : []);
+    }, [activeLineNumbers, debugLine]);
 
-    // --- Auto-scroll Logic ---
+    // --- "Gentle" Auto-scroll Logic ---
     useEffect(() => {
-        if (currentHighlights.length > 0) {
+        // Only scroll if enabled AND we have a target
+        if (autoScroll && currentHighlights.length > 0 && scrollAreaRef.current) {
             const firstActive = currentHighlights[0];
             const element = lineRefs.current[firstActive];
 
-            if (element && scrollAreaRef.current) {
-                element.scrollIntoView({
-                    block: 'center',
-                    behavior: 'smooth'
-                });
+            if (element) {
+                const container = scrollAreaRef.current;
+                
+                // Calculate positions manually to avoid "page jumping"
+                const elementTop = element.offsetTop;
+                const elementHeight = element.offsetHeight;
+                const containerHeight = container.clientHeight;
+                const scrollTop = container.scrollTop;
+
+                // Check if the element is currently visible in the container
+                // We add a small buffer (50px) to context lines
+                const isVisible = (
+                    elementTop >= scrollTop + 20 &&
+                    (elementTop + elementHeight) <= (scrollTop + containerHeight - 20)
+                );
+
+                // If it's NOT visible, scroll to it.
+                // If it IS visible, do nothing (this prevents jittering when stepping line-by-line)
+                if (!isVisible) {
+                    container.scrollTo({
+                        top: elementTop - (containerHeight / 2) + (elementHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
             }
         }
-    }, [currentHighlights, mode]);
+    }, [currentHighlights, mode, autoScroll]);
 
     useEffect(() => {
         setDebugLine(null);
@@ -102,6 +125,7 @@ export function PseudocodePanel({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        // ... (Existing key handling code) ...
         let nextLine = debugLine || activeLineNumbers[0] || 1;
         if (e.key === 'ArrowDown' || e.key === 'j') {
             e.preventDefault();
@@ -132,16 +156,30 @@ export function PseudocodePanel({
                         </Badge>
                     )}
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy code">
-                    {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-                    <span className="sr-only">Copy</span>
-                </Button>
+                <div className="flex items-center gap-1">
+                    {/* Auto-Scroll Toggle */}
+                    <Button 
+                        variant={autoScroll ? "secondary" : "ghost"} 
+                        size="icon" 
+                        className="h-8 w-8" 
+                        onClick={() => setAutoScroll(!autoScroll)}
+                        title={autoScroll ? "Auto-scroll ON (Click to disable)" : "Auto-scroll OFF (Click to enable)"}
+                    >
+                        <ArrowDownCircle className={cn("size-3.5 transition-all", autoScroll ? "text-primary" : "text-muted-foreground opacity-50")} />
+                        <span className="sr-only">Toggle Auto-scroll</span>
+                    </Button>
+
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy code">
+                        {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
+                        <span className="sr-only">Copy</span>
+                    </Button>
+                </div>
             </CardHeader>
 
             <CardContent className="p-0 flex-1 overflow-hidden relative bg-card font-mono text-xs md:text-sm">
                 <div
                     ref={scrollAreaRef}
-                    className="h-full overflow-y-auto py-2 leading-6 scroll-smooth"
+                    className="h-full overflow-y-auto py-2 leading-6" // Removed scroll-smooth from CSS, handling it in JS
                 >
                     {lines.map((lineContent, index) => {
                         const lineNumber = index + 1;
