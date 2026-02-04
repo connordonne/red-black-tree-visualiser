@@ -1,73 +1,163 @@
-# React + TypeScript + Vite
+# Red-Black Tree Visualiser
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive web-based visualizer for Red-Black Trees, designed to help students and developers understand the complex operations and rotations that maintain tree balance. This educational tool provides step-by-step animations, pseudocode explanations, and memory representations.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Core Functionality
+- **Interactive Tree Operations**
+  - Insert nodes with animated step-by-step visualization
+  - Delete nodes with detailed balancing operations
+  - Find/search for specific nodes in the tree
+  - Bulk insert random nodes for testing
 
-## React Compiler
+### Visualization Features
+- **Step-by-Step Animation**: Navigate through each operation step with playback controls
+- **Tree Canvas**: Interactive D3-powered tree visualization with color-coded nodes (red/black)
+- **Memory Grid**: Visual representation of node memory addresses (0-255)
+- **Pseudocode Panel**: Synchronized pseudocode highlighting for each operation step
+- **Node Inspector**: Detailed view of selected node properties (key, color, parent, children, memory address)
+- **Explanation Box**: Real-time descriptions of what's happening at each step
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### User Experience
+- **Drag & Drop Panels**: Customizable layout with sortable widgets
+- **Dark/Light Mode**: Theme toggle for comfortable viewing
+- **Keyboard Controls**: Navigate steps with arrow keys, spacebar to play/pause
+- **Player Controls**: Play, pause, step forward/backward, jump to start/end
+- **Adjustable Speed**: Control animation playback speed
+- **View Options**: Toggle visibility of memory grid, pseudocode, and explanations
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Frontend Framework & Libraries
+- **React 19** - UI framework
+- **TypeScript** - Type-safe development
+- **Vite** - Fast build tool and dev server
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Visualization & Animation
+- **D3.js** - Tree rendering and SVG manipulation
+- **Framer Motion** - Smooth animations and transitions
+- **@dnd-kit** - Drag and drop functionality for panels
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### UI Components & Styling
+- **Tailwind CSS** - Utility-first CSS framework
+- **Radix UI** - Accessible UI primitives (tabs, switches, labels, etc.)
+- **Lucide React** - Icon library
+- **class-variance-authority** - Component variant management
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Development Tools
+- **ESLint** - Code linting
+- **Jest** - Testing framework
+- **PostCSS** - CSS processing
+
+## Prerequisites
+
+Before running this project, make sure you have:
+- **Node.js** (version 18 or higher)
+- **npm** or **yarn** package manager
+
+## Local Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/connordonne/red-black-tree-visualiser.git
+   cd red-black-tree-visualiser
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**
+   
+   Navigate to `http://localhost:5173` (or the port shown in your terminal)
+
+## Development Commands
+
+```bash
+# Start development server with hot module replacement
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build locally
+npm run preview
+
+# Run linter
+npm run lint
+
+# Run tests
+npm run test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+red-black-tree-visualiser/
+├── public/                 # Static assets
+│   └── uofg-crest.png     # University of Glasgow branding
+├── src/
+│   ├── components/        # React components
+│   │   ├── Controls.tsx           # Operation input controls
+│   │   ├── TreeCanvas.tsx         # D3 tree visualization
+│   │   ├── PlayerControls.tsx     # Animation playback controls
+│   │   ├── PseudocodePanel.tsx    # Code explanation panel
+│   │   ├── MemoryGrid.tsx         # Memory address grid
+│   │   ├── NodeInspector.tsx      # Selected node details
+│   │   ├── ExplanationBox.tsx     # Step descriptions
+│   │   ├── ViewOptions.tsx        # UI configuration
+│   │   └── ui/                    # Reusable UI components
+│   ├── core/
+│   │   └── RedBlackTree.ts        # Red-Black Tree implementation
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utility functions and pseudocode data
+│   ├── App.tsx            # Main application component
+│   ├── RedBlackTreeVisualiser.tsx  # Main visualizer component
+│   └── main.tsx           # Application entry point
+├── index.html             # HTML entry point
+├── package.json           # Project dependencies and scripts
+├── vite.config.ts         # Vite configuration
+├── tsconfig.json          # TypeScript configuration
+└── tailwind.config.cjs    # Tailwind CSS configuration
+```
+
+## How It Works
+
+1. **Select an Operation**: Choose insert, delete, or find from the controls panel
+2. **Enter a Value**: Provide the node key you want to operate on
+3. **Watch the Animation**: The visualizer will step through the operation, showing:
+   - Tree structure changes with highlighted nodes
+   - Pseudocode execution with line highlighting
+   - Memory address representations
+   - Detailed explanations of each step
+4. **Control Playback**: Use player controls to navigate, pause, or adjust speed
+5. **Inspect Nodes**: Click on nodes in the memory grid to see detailed information
+
+## Educational Value
+
+This visualizer is particularly useful for:
+- Computer Science students learning about balanced binary search trees
+- Understanding the complex rotation and recoloring operations in Red-Black Trees
+- Visualizing how tree balance is maintained during insertions and deletions
+- Comparing theoretical algorithms with actual implementations
+- Debugging and understanding Red-Black Tree behavior
+
+## License
+
+This project is developed as an educational tool for the University of Glasgow.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Acknowledgments
+
+- University of Glasgow Computer Science Department
+- Built with modern web technologies for optimal performance and user experience
