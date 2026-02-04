@@ -38,7 +38,7 @@ function validateBlackHeight(node: TreeNode | null): number {
 }
 
 // Helper to manually construct trees for specific cases
-function createNode(key: number, color: Color, parent: TreeNode | null = null): TreeNode {
+function createNode(key: number, color:typeof Color[keyof typeof Color], parent: TreeNode | null = null): TreeNode {
   const node = new TreeNode(key);
   node.color = color;
   node.parent = parent;

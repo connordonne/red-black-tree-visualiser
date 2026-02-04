@@ -6,7 +6,7 @@ import { TreeNode, Color } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize, Minimize2 } from "lucide-react";
-import { cn } from '@/lib/utils';
+//import { cn } from '@/lib/utils';
 
 interface TreeCanvasProps {
     root: TreeNode | null;
@@ -145,7 +145,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         if (!root || !svgRef.current || !gRef.current) return;
 
         const svg = d3.select(svgRef.current);
-        const g = d3.select(gRef.current);
+        //const g = d3.select(gRef.current);
 
         zoomBehavior.current = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
@@ -182,9 +182,10 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
     const nodeKey = (d: RBTHierarchyPointNode) => `node-${d.data.key}-${d.data.address}`;
     const linkKey = (d: RBTHierarchyPointLink) => `link-${d.source.data.key}-${d.target.data.key}`;
 
-    const transition = { type: 'spring', stiffness: 300, damping: 30 };
+    const transition: any = { type: 'spring', stiffness: 300, damping: 30 };
     const toHex = (n: number) => `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
 
+    
     return (
         <div ref={containerRef} className="h-full w-full relative overflow-hidden bg-dot-pattern group">
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

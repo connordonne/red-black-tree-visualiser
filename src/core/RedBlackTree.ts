@@ -1,10 +1,13 @@
 // src/core/RedBlackTree.ts
 
-export enum Color { RED, BLACK }
+export const Color = {
+    RED: 0,
+    BLACK: 1
+} as const;
 
 export class TreeNode {
     key: number;
-    color: Color;
+    color: typeof Color[keyof typeof Color];
     parent: TreeNode | null;
     left: TreeNode | null;
     right: TreeNode | null;
@@ -227,7 +230,7 @@ export class RedBlackTree {
         }
         this.addStep(steps, `Found node ${key}.`, [z.key], []);
         let y: TreeNode = z;
-        let yOriginalColor: Color = y.color;
+        let yOriginalColor: typeof Color[keyof typeof Color] = y.color;
         let x: TreeNode | null;
         let xParent: TreeNode | null;
         if (z.left === null) {

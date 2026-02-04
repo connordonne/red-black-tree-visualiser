@@ -172,7 +172,7 @@ export function PseudocodePanel({
                         return (
                             <div key={lineNumber} className="flex flex-col">
                                 <div
-                                    ref={(el) => (lineRefs.current[lineNumber] = el)}
+                                    ref={(el: HTMLDivElement | null) => { lineRefs.current[lineNumber] = el; }}
                                     className={cn(
                                         "group flex w-full px-4 border-l-4 transition-colors duration-150",
                                         isActive

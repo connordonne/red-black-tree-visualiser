@@ -19,7 +19,7 @@ const AnimatedTabs = TabsPrimitive.Root
 const AnimatedTabsList = React.forwardRef<
     React.ElementRef<typeof TabsPrimitive.List>,
     React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, ...props }) => {
     const [indicatorStyle, setIndicatorStyle] = React.useState({ left: 0, width: 0 });
     const listRef = React.useRef<HTMLDivElement>(null);
 

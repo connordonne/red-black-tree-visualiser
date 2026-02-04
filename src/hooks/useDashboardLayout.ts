@@ -70,9 +70,9 @@ export function useDashboardLayout() {
         }
 
         setColumns((prev) => {
-            const activeItems = prev[activeContainer];
+            //const activeItems = prev[activeContainer];
             const overItems = prev[overContainer];
-            const activeIndex = activeItems.indexOf(activeId);
+            //const activeIndex = activeItems.indexOf(activeId);
             const overIndex = (overId === 'main' || overId === 'sidebar')
                 ? overItems.length + 1
                 : overItems.indexOf(overId as WidgetId);

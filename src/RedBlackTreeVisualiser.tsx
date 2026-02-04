@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { animate } from "framer-motion";
-import { Shield, MessageSquare } from "lucide-react";
+//import { Shield, MessageSquare } from "lucide-react";
 
 // Components
-import { Button } from "@/components/ui/button";
+//import { Button } from "@/components/ui/button";
 import { Controls } from "@/components/Controls";
 import { PlayerControls } from "@/components/PlayerControls";
 import { ExplanationBox } from "@/components/ExplanationBox";
@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { ANNOTATIONS } from "@/lib/pseudocode";
 
 // Configuration
-const FEEDBACK_URL = "https://docs.google.com/forms/"; 
+//const FEEDBACK_URL = "https://docs.google.com/forms/"; 
 
 export default function RedBlackTreeVisualiser() {
     // --- State Logic ---
@@ -265,10 +265,10 @@ export default function RedBlackTreeVisualiser() {
                         </div>
 
                         <div className="flex items-center gap-2 bg-card/50 p-1.5 rounded-lg border shadow-sm backdrop-blur-sm relative z-50">
-                            <Button variant="outline" size="sm" className="gap-2 h-8 border-primary/20 text-primary hover:bg-primary/5" onClick={() => window.open(FEEDBACK_URL, '_blank')}>
+                            {/* <Button variant="outline" size="sm" className="gap-2 h-8 border-primary/20 text-primary hover:bg-primary/5" onClick={() => window.open(FEEDBACK_URL, '_blank')}>
                                 <MessageSquare className="size-4" />
                                 <span className="hidden sm:inline font-medium">Feedback</span>
-                            </Button>
+                            </Button> */}
                             <div className="h-6 w-px bg-border mx-1" />
                             <ViewOptions
                                 showTree={viewState.showTree} setShowTree={(v) => setViewState(p => ({...p, showTree: v}))}

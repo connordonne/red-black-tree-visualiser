@@ -1,12 +1,13 @@
 // src/components/ViewOptions.tsx
 
-import React, { useState, useRef, useEffect } from "react"
+//import React, { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card } from "@/components/ui/card"
 import { LayoutTemplate, ChevronDown, Eye, Accessibility } from "lucide-react"
-import { Separator } from "@/components/ui/separator" // Assuming you might have this, or use <hr>
+//import { Separator } from "@/components/ui/separator" 
+import { useState, useRef, useEffect } from "react"
 
 interface ViewOptionsProps {
     showTree: boolean

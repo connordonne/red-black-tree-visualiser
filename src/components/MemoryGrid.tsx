@@ -1,9 +1,10 @@
 // src/components/MemoryGrid.tsx
 
-import React, { useMemo } from 'react';
+//import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TreeNode, Color } from "@/core/RedBlackTree";
 import { cn } from "@/lib/utils";
+import { useMemo } from 'react'; 
 
 interface MemoryGridProps {
     root: TreeNode | null;

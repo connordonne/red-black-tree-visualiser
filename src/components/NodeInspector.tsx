@@ -1,10 +1,11 @@
 // src/components/NodeInspector.tsx
 
-import React, { useMemo } from 'react';
+//import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TreeNode, Color } from "@/core/RedBlackTree";
 import { cn } from "@/lib/utils";
 import { Microscope, AlertCircle, Lock } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface NodeInspectorProps {
     root: TreeNode | null;
