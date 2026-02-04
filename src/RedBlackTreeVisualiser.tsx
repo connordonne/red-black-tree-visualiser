@@ -41,7 +41,7 @@ import { ANNOTATIONS } from "@/lib/pseudocode";
 import { ViewOptions } from "@/components/ViewOptions";
 import { cn } from "@/lib/utils";
 import { SortableItem } from "@/components/SortableItem";
-import { Shield, BookOpen, MessageSquare } from "lucide-react"; // Added MessageSquare
+import { Shield, BookOpen, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // --- CONFIGURATION ---
@@ -56,17 +56,6 @@ const INITIAL_STEP: Step = {
 };
 
 type WidgetId = 'tree' | 'memory' | 'explanation' | 'player' | 'controls' | 'pseudocode';
-
-// --- Custom Resize Handle Icon ---
-const ResizeHandle = () => (
-    <div className="absolute bottom-1 right-1 p-1 pointer-events-none opacity-50">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground">
-            <path d="M8 9L9 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M5 9L9 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M2 9L9 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-    </div>
-);
 
 export default function RedBlackTreeVisualiser() {
     // --- Algorithm State ---
@@ -116,6 +105,35 @@ export default function RedBlackTreeVisualiser() {
             coordinateGetter: sortableKeyboardCoordinates,
         })
     );
+
+    // --- Manual Resize Logic ---
+    const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent drag-and-drop from triggering
+        
+        const startY = e.clientY;
+        const startHeight = treeContainerRef.current?.offsetHeight || 554;
+
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            if (treeContainerRef.current) {
+                const newHeight = startHeight + (moveEvent.clientY - startY);
+                // Min height constraint to prevent breaking layout
+                if (newHeight >= 300) {
+                    treeContainerRef.current.style.height = `${newHeight}px`;
+                }
+            }
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = ''; // Reset cursor
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = 'ns-resize'; // Global cursor while dragging
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -316,7 +334,11 @@ export default function RedBlackTreeVisualiser() {
         switch (id) {
             case 'tree':
                 content = (
-                    <div ref={treeContainerRef} className="h-[554px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative resize-y min-h-[300px] [&::-webkit-resizer]:bg-transparent">
+                    <div 
+                        ref={treeContainerRef} 
+                        // Removed 'resize-y' to hide browser handle. Added 'relative group'.
+                        className="h-[554px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative min-h-[300px] group"
+                    >
                         <TreeCanvas
                             root={currentStepData.treeState}
                             highlightedKeys={currentStepData.highlightedNodeKeys}
@@ -326,8 +348,18 @@ export default function RedBlackTreeVisualiser() {
                             onHoverAddress={setHoveredAddress}
                             onResetContainerSize={resetTreeSize}
                         />
-                        
-                        <ResizeHandle />
+
+                        {/* Custom Resize Handle */}
+                        <div 
+                            onMouseDown={handleResizeMouseDown}
+                            className="absolute bottom-0 right-0 -mr-1.5 -mb-1.5 p-2 cursor-ns-resize z-50 pointer-events-auto opacity-30 group-hover:opacity-100 transition-opacity duration-200"
+                            title="Drag to resize tree view"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground hover:text-foreground active:text-primary transition-colors">
+                                <path d="M10 2L2 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                <path d="M10 6L6 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                        </div>
                     </div>
                 );
                 break;
