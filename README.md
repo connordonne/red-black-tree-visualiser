@@ -155,5 +155,5 @@ This project is developed as an educational tool for the University of Glasgow.
 
 ## Acknowledgments
 
-- University of Glasgow Computer Science Department
+- University of Glasgow School of Computing Science
 - Built with modern web technologies for optimal performance and user experience
