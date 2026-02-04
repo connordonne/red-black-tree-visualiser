@@ -29,14 +29,14 @@ const AnimatedTabsList = React.forwardRef<
 
         if (listElement && activeTab) {
             const listRect = listElement.getBoundingClientRect();
-            const tabRect = activeTab.getBoundingClientRect();
+            const activeRect = activeTab.getBoundingClientRect();
 
             setIndicatorStyle({
-                left: tabRect.left - listRect.left,
-                width: tabRect.width,
+                left: activeRect.left - listRect.left,
+                width: activeRect.width,
             });
         }
-    }, []);
+    }, []); 
 
     const childCount = React.Children.count(children);
 
@@ -49,35 +49,28 @@ const AnimatedTabsList = React.forwardRef<
                     "relative flex h-9 items-center justify-center rounded-lg p-1 text-muted-foreground w-full",
                     
                     // --- UPDATED CONTAINER STYLES ---
-                    // Background: Solid distinct grey/black
+                    // Removed 'shadow-inner' which was clipping the top border
                     "bg-slate-100 dark:bg-slate-950",
-                    
-                    // Depth: Inner shadow makes it look like a "slot"
-                    "shadow-inner",
-                    
-                    // The Pop: A distinct ring around the outside of the container
-                    "ring-1 ring-slate-300/50 dark:ring-slate-700",
+                    "border border-slate-200/50 dark:border-slate-800",
                     
                     className
                 )}
                 {...props}
             >
-                {/* The sliding indicator (Kept the style you liked) */}
+                {/* The sliding indicator */}
                 <motion.div
                     layout
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     className={cn(
-                        "absolute left-0 top-1 bottom-1 rounded-md z-0",
+                        // Use inset-1 to give it a clean 4px gap from all sides
+                        "absolute inset-y-1 rounded-md z-0", 
                         "bg-white dark:bg-slate-800",
-                        "shadow-[0_2px_10px_rgba(0,0,0,0.1)]",
-                        "ring-1 ring-primary/30 dark:ring-primary/50",
+                        "shadow-sm",
                         "border border-slate-200 dark:border-slate-700"
                     )}
                     style={{ 
                         left: indicatorStyle.left, 
                         width: indicatorStyle.width,
-                        height: 'calc(100% - 8px)',
-                        top: '4px'
                     }}
                 />
                 
@@ -103,9 +96,12 @@ const AnimatedTabsTrigger = React.forwardRef<
         <TabsPrimitive.Trigger
             ref={ref}
             className={cn(
-                "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all",
+                
+                // Removed ring-offset to prevent visual cutting
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+
                 "text-slate-500 dark:text-slate-400",
-                // Kept the text pop you liked
                 "data-[state=active]:text-primary dark:data-[state=active]:text-white data-[state=active]:font-bold",
                 className
             )}

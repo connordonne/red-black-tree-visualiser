@@ -41,7 +41,12 @@ import { ANNOTATIONS } from "@/lib/pseudocode";
 import { ViewOptions } from "@/components/ViewOptions";
 import { cn } from "@/lib/utils";
 import { SortableItem } from "@/components/SortableItem";
-import { Shield, BookOpen } from "lucide-react"; // Added Shield icon for UofG logo vibe
+import { Shield, BookOpen, MessageSquare } from "lucide-react"; // Added MessageSquare
+import { Button } from "@/components/ui/button";
+
+// --- CONFIGURATION ---
+// TODO: Replace this with your actual Google Form URL
+const FEEDBACK_URL = "https://docs.google.com/forms/"; 
 
 const INITIAL_STEP: Step = {
     treeState: null,
@@ -54,10 +59,11 @@ type WidgetId = 'tree' | 'memory' | 'explanation' | 'player' | 'controls' | 'pse
 
 // --- Custom Resize Handle Icon ---
 const ResizeHandle = () => (
-    <div className="absolute bottom-0 right-0 p-1.5 pointer-events-none">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground/40">
-            <path d="M8 10L10 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M4 10L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <div className="absolute bottom-1 right-1 p-1 pointer-events-none opacity-50">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground">
+            <path d="M8 9L9 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M5 9L9 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M2 9L9 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
     </div>
 );
@@ -322,20 +328,6 @@ export default function RedBlackTreeVisualiser() {
                         />
                         
                         <ResizeHandle />
-
-                        <div className="absolute bottom-4 left-4 p-2 bg-background/90 backdrop-blur rounded-md border text-xs shadow-sm flex flex-col gap-1.5 pointer-events-none">
-                            <div className="font-semibold text-muted-foreground mb-0.5">Legend</div>
-                            <div className="flex items-center gap-2">
-                                <div className={cn("w-3 h-3 rounded-full border-2 border-red-500 bg-red-500/20", colorBlindMode && "border-dashed")} />
-                                <span>Red Node</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center justify-center w-3 h-3 rounded-full border-2 border-[var(--foreground)] bg-[var(--primary)]/20">
-                                </div>
-                                <span>Black Node</span>
-                            </div>
-                            {showAddresses && <div className="text-[10px] text-muted-foreground mt-1">Showing Memory Addrs</div>}
-                        </div>
                     </div>
                 );
                 break;
@@ -455,6 +447,7 @@ export default function RedBlackTreeVisualiser() {
                                 alt="University of Glasgow Crest" 
                                 className="h-12 w-auto md:h-14 object-contain drop-shadow-md"
                             />
+
                             <div className="flex flex-col">
                                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
                                     UofG Red–Black Tree Visualiser
@@ -466,6 +459,22 @@ export default function RedBlackTreeVisualiser() {
                         </div>
 
                         <div className="flex items-center gap-2 bg-card/50 p-1.5 rounded-lg border shadow-sm backdrop-blur-sm relative z-50">
+                            
+                            {/* --- FEEDBACK BUTTON --- */}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 h-8 border-primary/20 text-primary hover:bg-primary/5"
+                                onClick={() => window.open(FEEDBACK_URL, '_blank', 'noopener,noreferrer')}
+                                title="Open Feedback Form (Google Form)"
+                            >
+                                <MessageSquare className="size-4" />
+                                <span className="hidden sm:inline font-medium">Feedback</span>
+                            </Button>
+
+                            <div className="h-6 w-px bg-border mx-1" />
+                            {/* ----------------------- */}
+
                             <ViewOptions
                                 showTree={showTree}
                                 setShowTree={setShowTree}
