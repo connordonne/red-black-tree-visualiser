@@ -23,7 +23,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground); /* Added */
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -44,76 +44,113 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+
+  /* "Digital Textbook" Theme (Light Mode) */
+  /* Background: Cool Slate 100/50 mix */
+  --background: oklch(0.96 0.01 240);
+  /* Foreground: Deep Charcoal */
+  --foreground: oklch(0.27 0.02 260);
+
+  /* Card: Pure White for contrast against background */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.27 0.02 260);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.702 0.189 22.228);
-  --destructive-foreground: oklch(0.985 0 0); /* Added */
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.27 0.02 260);
+
+  /* Primary: Royal Blue (#2563EB) - The "Action" Color */
+  --primary: oklch(0.55 0.23 260);
+  --primary-foreground: oklch(1 0 0);
+
+  /* Secondary: Very light cool grey */
+  --secondary: oklch(0.96 0.01 240);
+  --secondary-foreground: oklch(0.27 0.02 260);
+
+  /* Muted: Lines and secondary text */
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.55 0.03 260); /* Medium Slate Grey */
+
+  --accent: oklch(0.94 0.02 240);
+  --accent-foreground: oklch(0.27 0.02 260);
+
+  /* Destructive: Matte Red (#EF4444) for Red Nodes/Delete */
+  --destructive: oklch(0.63 0.22 29);
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.90 0.02 240);
+  --input: oklch(0.90 0.02 240);
+  --ring: oklch(0.55 0.23 260); /* Matches Primary */
+
+  --chart-1: oklch(0.55 0.23 260);
+  --chart-2: oklch(0.63 0.22 29);
+  --chart-3: oklch(0.27 0.02 260);
+  --chart-4: oklch(0.85 0.15 85); /* Highlight Yellow */
+  --chart-5: oklch(0.60 0.15 200);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.27 0.02 260);
+  --sidebar-primary: oklch(0.55 0.23 260);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.01 240);
+  --sidebar-accent-foreground: oklch(0.27 0.02 260);
+  --sidebar-border: oklch(0.90 0.02 240);
+  --sidebar-ring: oklch(0.55 0.23 260);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0); /* Added */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* "Modern IDE" Theme (Dark Mode) */
+  /* Background: Deep Gunmetal */
+  --background: oklch(0.20 0.02 260);
+  --foreground: oklch(0.98 0 0);
+
+  /* Card: Slightly lighter than bg */
+  --card: oklch(0.23 0.02 260);
+  --card-foreground: oklch(0.98 0 0);
+
+  --popover: oklch(0.23 0.02 260);
+  --popover-foreground: oklch(0.98 0 0);
+
+  /* Primary: Lighter Vivid Blue */
+  --primary: oklch(0.60 0.20 260);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.30 0.02 260);
+  --secondary-foreground: oklch(0.98 0 0);
+
+  --muted: oklch(0.30 0.02 260);
+  --muted-foreground: oklch(0.70 0.01 240);
+
+  --accent: oklch(0.30 0.02 260);
+  --accent-foreground: oklch(0.98 0 0);
+
+  --destructive: oklch(0.60 0.22 29);
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.30 0.02 260);
+  --input: oklch(0.30 0.02 260);
+  --ring: oklch(0.60 0.20 260);
+
+  --chart-1: oklch(0.60 0.20 260);
+  --chart-2: oklch(0.60 0.22 29);
+  --chart-3: oklch(0.98 0 0);
+  --chart-4: oklch(0.85 0.15 85);
+  --chart-5: oklch(0.60 0.15 200);
+
+  --sidebar: oklch(0.23 0.02 260);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.60 0.20 260);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.30 0.02 260);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(0.30 0.02 260);
+  --sidebar-ring: oklch(0.60 0.20 260);
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
-  body { @apply bg-background text-foreground; }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

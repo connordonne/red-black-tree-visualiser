@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card } from "@/components/ui/card"
-import { LayoutTemplate, ChevronDown } from "lucide-react"
+import { LayoutTemplate, ChevronDown, Eye, Accessibility } from "lucide-react"
+import { Separator } from "@/components/ui/separator" // Assuming you might have this, or use <hr>
 
 interface ViewOptionsProps {
     showTree: boolean
@@ -18,19 +19,20 @@ interface ViewOptionsProps {
     setShowControls: (val: boolean) => void
     showMemory: boolean
     setShowMemory: (val: boolean) => void
+    colorBlindMode: boolean
+    setColorBlindMode: (val: boolean) => void
+    showAddresses: boolean
+    setShowAddresses: (val: boolean) => void
 }
 
 export function ViewOptions({
-                                showTree,
-                                setShowTree,
-                                showExplanation,
-                                setShowExplanation,
-                                showPseudocode,
-                                setShowPseudocode,
-                                showControls,
-                                setShowControls,
-                                showMemory,
-                                setShowMemory
+                                showTree, setShowTree,
+                                showExplanation, setShowExplanation,
+                                showPseudocode, setShowPseudocode,
+                                showControls, setShowControls,
+                                showMemory, setShowMemory,
+                                colorBlindMode, setColorBlindMode,
+                                showAddresses, setShowAddresses
                             }: ViewOptionsProps) {
     const [isOpen, setIsOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
@@ -50,44 +52,71 @@ export function ViewOptions({
     return (
         <div className="relative" ref={ref}>
             <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="gap-2"
+                className="gap-2 h-8"
                 onClick={() => setIsOpen(!isOpen)}
                 title="View Options"
             >
                 <LayoutTemplate className="size-4" />
-                <span className="hidden sm:inline">View</span>
+                <span className="hidden sm:inline font-normal">View</span>
                 <ChevronDown className="size-3 opacity-50" />
             </Button>
             {isOpen && (
-                <Card className="absolute right-0 top-full mt-2 w-64 p-4 z-50 flex flex-col gap-4 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                <Card className="absolute right-0 top-full mt-2 w-72 p-4 z-50 flex flex-col gap-4 shadow-xl animate-in fade-in zoom-in-95 duration-200 border-border/50">
                     <div className="space-y-4">
-                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Visibility</h4>
-
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="view-tree" className="cursor-pointer">Tree Canvas</Label>
-                            <Switch id="view-tree" checked={showTree} onCheckedChange={setShowTree} />
+                        <div>
+                            <div className="flex items-center gap-2 mb-3 text-primary">
+                                <Accessibility className="size-4" />
+                                <h4 className="font-medium text-sm">Accessibility & Display</h4>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <Label htmlFor="cb-mode" className="cursor-pointer font-normal">Color-Blind Mode</Label>
+                                        <span className="text-[10px] text-muted-foreground">Patterns for colors</span>
+                                    </div>
+                                    <Switch id="cb-mode" checked={colorBlindMode} onCheckedChange={setColorBlindMode} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <Label htmlFor="addr-mode" className="cursor-pointer font-normal">Show Addresses</Label>
+                                        <span className="text-[10px] text-muted-foreground">Hex instead of Keys</span>
+                                    </div>
+                                    <Switch id="addr-mode" checked={showAddresses} onCheckedChange={setShowAddresses} />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="view-mem" className="cursor-pointer">Memory View</Label>
-                            <Switch id="view-mem" checked={showMemory} onCheckedChange={setShowMemory} />
-                        </div>
+                        <div className="h-px bg-border" />
 
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="view-expl" className="cursor-pointer">Explanation</Label>
-                            <Switch id="view-expl" checked={showExplanation} onCheckedChange={setShowExplanation} />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="view-ctrl" className="cursor-pointer">Controls</Label>
-                            <Switch id="view-ctrl" checked={showControls} onCheckedChange={setShowControls} />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="view-pseudo" className="cursor-pointer">Pseudocode</Label>
-                            <Switch id="view-pseudo" checked={showPseudocode} onCheckedChange={setShowPseudocode} />
+                        <div>
+                            <div className="flex items-center gap-2 mb-3 text-primary">
+                                <Eye className="size-4" />
+                                <h4 className="font-medium text-sm">Widget Visibility</h4>
+                            </div>
+                            <div className="grid gap-3">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="view-tree" className="cursor-pointer font-normal">Tree Canvas</Label>
+                                    <Switch id="view-tree" checked={showTree} onCheckedChange={setShowTree} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="view-mem" className="cursor-pointer font-normal">Memory View</Label>
+                                    <Switch id="view-mem" checked={showMemory} onCheckedChange={setShowMemory} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="view-expl" className="cursor-pointer font-normal">Explanation</Label>
+                                    <Switch id="view-expl" checked={showExplanation} onCheckedChange={setShowExplanation} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="view-ctrl" className="cursor-pointer font-normal">Controls</Label>
+                                    <Switch id="view-ctrl" checked={showControls} onCheckedChange={setShowControls} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="view-pseudo" className="cursor-pointer font-normal">Pseudocode</Label>
+                                    <Switch id="view-pseudo" checked={showPseudocode} onCheckedChange={setShowPseudocode} />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </Card>

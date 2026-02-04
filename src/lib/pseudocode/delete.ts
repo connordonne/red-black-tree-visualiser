@@ -24,43 +24,43 @@ while x ≠ T.root and x.color == BLACK
     if x == x.p.left
         w = x.p.right
         if w.color == RED
-            w.color = BLACK              // Case 1
-            x.p.color = RED              // Case 1
-            LEFT-ROTATE(T, x.p)          // Case 1
-            w = x.p.right                // Case 1
+            w.color = BLACK             
+            x.p.color = RED             
+            LEFT-ROTATE(T, x.p)        
+            w = x.p.right                
         if w.left.color == BLACK and w.right.color == BLACK
-            w.color = RED                // Case 2
-            x = x.p                      // Case 2
+            w.color = RED                
+            x = x.p                    
         else if w.right.color == BLACK
-                w.left.color = BLACK     // Case 3
-                w.color = RED            // Case 3
-                RIGHT-ROTATE(T, w)       // Case 3
-                w = x.p.right            // Case 3
-            w.color = x.p.color          // Case 4
-            x.p.color = BLACK            // Case 4
-            w.right.color = BLACK        // Case 4
-            LEFT-ROTATE(T, x.p)          // Case 4
-            x = T.root                   // Case 4
-    else (same as then clause with "right" and "left" exchanged)
+                w.left.color = BLACK     
+                w.color = RED           
+                RIGHT-ROTATE(T, w)    
+                w = x.p.right        
+            w.color = x.p.color          
+            x.p.color = BLACK           
+            w.right.color = BLACK        
+            LEFT-ROTATE(T, x.p)         
+            x = T.root                 
+    else 
         w = x.p.left
         if w.color == RED
-            w.color = BLACK              // Case 1 (Sym)
-            x.p.color = RED              // Case 1 (Sym)
-            RIGHT-ROTATE(T, x.p)         // Case 1 (Sym)
-            w = x.p.left                 // Case 1 (Sym)
+            w.color = BLACK              
+            x.p.color = RED             
+            RIGHT-ROTATE(T, x.p)        
+            w = x.p.left               
         if w.right.color == BLACK and w.left.color == BLACK
-            w.color = RED                // Case 2 (Sym)
-            x = x.p                      // Case 2 (Sym)
+            w.color = RED             
+            x = x.p                    
         else if w.left.color == BLACK
-                w.right.color = BLACK    // Case 3 (Sym)
-                w.color = RED            // Case 3 (Sym)
-                LEFT-ROTATE(T, w)        // Case 3 (Sym)
-                w = x.p.left             // Case 3 (Sym)
-            w.color = x.p.color          // Case 4 (Sym)
-            x.p.color = BLACK            // Case 4 (Sym)
-            w.left.color = BLACK         // Case 4 (Sym)
-            RIGHT-ROTATE(T, x.p)         // Case 4 (Sym)
-            x = T.root                   // Case 4 (Sym)
+                w.right.color = BLACK   
+                w.color = RED        
+                LEFT-ROTATE(T, w)       
+                w = x.p.left           
+            w.color = x.p.color          
+            x.p.color = BLACK            
+            w.left.color = BLACK        
+            RIGHT-ROTATE(T, x.p)         
+            x = T.root                   
 x.color = BLACK`;
 
 export const DELETE_ANNOTATIONS: Record<number, string> = {
