@@ -158,7 +158,7 @@ export default function RedBlackTreeVisualiser() {
         return () => clearTimeout(timer);
     }, [isPlaying, currentStepIndex, steps.length, playbackSpeed]);
 
-    const runOperation = (operationFn: (tree: RedBlackTree) => Step[], opType?: 'insert' | 'delete') => {
+    const runOperation = (operationFn: (tree: RedBlackTree) => Step[], opType?: 'insert' | 'delete' | 'find') => {
         const lastStep = steps[steps.length - 1];
         const reconstruction = new RedBlackTree();
         reconstruction.root = lastStep.treeState;
@@ -177,15 +177,7 @@ export default function RedBlackTreeVisualiser() {
     function submitFind() {
         if (!keyToFind) return;
         const val = parseInt(keyToFind, 10);
-        runOperation(t => {
-            const node = t.find(val);
-            return [{
-                treeState: t.clone().root,
-                description: node ? `Node ${val} found.` : `Node ${val} not found.`,
-                highlightedNodeKeys: node ? [node.key] : [],
-                pseudocodeLines: []
-            }];
-        });
+        runOperation(t => t.search(val), 'find');
         setKeyToFind("");
     }
     
@@ -223,8 +215,7 @@ export default function RedBlackTreeVisualiser() {
     }, []);
 
     const currentStepData = steps[currentStepIndex] || INITIAL_STEP;
-    const pseudocodeMode = activeTab === 'delete' ? 'delete' : 'insert';
-    
+    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';    
     const activeLinesToRender = useMemo(() => {
         return (currentStepData.operationType === pseudocodeMode) ? currentStepData.pseudocodeLines : [];
     }, [currentStepData, pseudocodeMode]);

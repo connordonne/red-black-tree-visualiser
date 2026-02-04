@@ -4,23 +4,21 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, Terminal, Info, ArrowDownCircle, MousePointer2 } from 'lucide-react';
+import { Copy, Check, Terminal, Info, ArrowDownCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ALGORITHMS } from '@/lib/pseudocode';
 
 export interface PseudocodePanelProps {
-    mode: 'insert' | 'delete';
-    activeLineNumbers: number[]; // 1-based line numbers
-    annotations?: Record<number, string>; // Tooltips for specific lines
+    mode: 'insert' | 'delete' | 'find'; 
+    activeLineNumbers: number[]; 
+    annotations?: Record<number, string>;
     onCopy?: () => void;
     className?: string;
 }
 
-// Simple syntax highlighter for the Pseudocode
+
 const highlightSyntax = (line: string) => {
     if (!line) return null;
-
-    // 1. Split comments
     const commentIndex = line.indexOf('//');
     let code = line;
     let comment = '';
@@ -28,10 +26,7 @@ const highlightSyntax = (line: string) => {
         code = line.substring(0, commentIndex);
         comment = line.substring(commentIndex);
     }
-
-    // 2. Tokenize code part slightly more robustly
     const tokens = code.split(/(\s+|[().,])/);
-
     const renderedTokens = tokens.map((token, i) => {
         if (['if', 'else', 'while', 'return', 'elseif'].includes(token.trim())) {
             return <span key={i} className="text-purple-600 dark:text-purple-400 font-bold">{token}</span>;
@@ -47,7 +42,6 @@ const highlightSyntax = (line: string) => {
         }
         return token;
     });
-
     return (
         <>
             {renderedTokens}
@@ -65,12 +59,11 @@ export function PseudocodePanel({
                                 }: PseudocodePanelProps) {
     const [copied, setCopied] = useState(false);
     const [debugLine, setDebugLine] = useState<number | null>(null);
-    const [autoScroll, setAutoScroll] = useState(true); // Control flag for scrolling
+    const [autoScroll, setAutoScroll] = useState(true);
 
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
-    // Safety check for algorithms
     const codeString = ALGORITHMS[mode] || "// Algorithm code not found.";
     const lines = useMemo(() => codeString.split('\n'), [codeString]);
 
@@ -78,31 +71,23 @@ export function PseudocodePanel({
         return activeLineNumbers.length > 0 ? activeLineNumbers : (debugLine ? [debugLine] : []);
     }, [activeLineNumbers, debugLine]);
 
-    // --- "Gentle" Auto-scroll Logic ---
     useEffect(() => {
-        // Only scroll if enabled AND we have a target
         if (autoScroll && currentHighlights.length > 0 && scrollAreaRef.current) {
             const firstActive = currentHighlights[0];
             const element = lineRefs.current[firstActive];
 
             if (element) {
                 const container = scrollAreaRef.current;
-                
-                // Calculate positions manually to avoid "page jumping"
                 const elementTop = element.offsetTop;
                 const elementHeight = element.offsetHeight;
                 const containerHeight = container.clientHeight;
                 const scrollTop = container.scrollTop;
 
-                // Check if the element is currently visible in the container
-                // We add a small buffer (50px) to context lines
                 const isVisible = (
                     elementTop >= scrollTop + 20 &&
                     (elementTop + elementHeight) <= (scrollTop + containerHeight - 20)
                 );
 
-                // If it's NOT visible, scroll to it.
-                // If it IS visible, do nothing (this prevents jittering when stepping line-by-line)
                 if (!isVisible) {
                     container.scrollTo({
                         top: elementTop - (containerHeight / 2) + (elementHeight / 2),
@@ -125,7 +110,6 @@ export function PseudocodePanel({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        // ... (Existing key handling code) ...
         let nextLine = debugLine || activeLineNumbers[0] || 1;
         if (e.key === 'ArrowDown' || e.key === 'j') {
             e.preventDefault();
@@ -157,7 +141,6 @@ export function PseudocodePanel({
                     )}
                 </div>
                 <div className="flex items-center gap-1">
-                    {/* Auto-Scroll Toggle */}
                     <Button 
                         variant={autoScroll ? "secondary" : "ghost"} 
                         size="icon" 
@@ -179,7 +162,7 @@ export function PseudocodePanel({
             <CardContent className="p-0 flex-1 overflow-hidden relative bg-card font-mono text-xs md:text-sm">
                 <div
                     ref={scrollAreaRef}
-                    className="h-full overflow-y-auto py-2 leading-6" // Removed scroll-smooth from CSS, handling it in JS
+                    className="h-full overflow-y-auto py-2 leading-6"
                 >
                     {lines.map((lineContent, index) => {
                         const lineNumber = index + 1;
@@ -188,7 +171,6 @@ export function PseudocodePanel({
 
                         return (
                             <div key={lineNumber} className="flex flex-col">
-                                {/* The Code Line Row */}
                                 <div
                                     ref={(el) => (lineRefs.current[lineNumber] = el)}
                                     className={cn(
@@ -214,7 +196,6 @@ export function PseudocodePanel({
                                     </span>
                                 </div>
 
-                                {/* The Annotation Row (Inserted IN FLOW to prevent overlap) */}
                                 {isActive && annotation && (
                                     <div className="pl-16 pr-4 py-2 bg-primary/5 border-l-4 border-l-primary/50 animate-in slide-in-from-top-1 duration-200">
                                         <div className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded border shadow-sm">
