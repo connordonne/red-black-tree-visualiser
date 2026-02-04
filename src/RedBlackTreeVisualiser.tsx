@@ -49,6 +49,16 @@ const INITIAL_STEP: Step = {
 
 type WidgetId = 'tree' | 'memory' | 'explanation' | 'player' | 'controls' | 'pseudocode';
 
+// --- Custom Resize Handle Icon ---
+const ResizeHandle = () => (
+    <div className="absolute bottom-0 right-0 p-1.5 pointer-events-none">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-muted-foreground/40">
+            <path d="M8 10L10 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M4 10L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+    </div>
+);
+
 export default function RedBlackTreeVisualiser() {
     // --- Algorithm State ---
     const [steps, setSteps] = useState<Step[]>([INITIAL_STEP]);
@@ -153,8 +163,6 @@ export default function RedBlackTreeVisualiser() {
     }
     
     function onBulkRandom() {
-        // REMOVED: setActiveTab('insert'); 
-        // This keeps the user on the "More" tab while running the insert operations.
         runOperation(t => {
             const bulkSteps: Step[] = [];
             for (let i = 0; i < 10; i++) {
@@ -279,7 +287,8 @@ export default function RedBlackTreeVisualiser() {
         switch (id) {
             case 'tree':
                 content = (
-                    <div className="h-[450px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative resize-y min-h-[300px]">
+                    // HEIGHT: 554px (Matches Controls + Code + Gap)
+                    <div className="h-[554px] w-full rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative resize-y min-h-[300px] [&::-webkit-resizer]:bg-transparent">
                         <TreeCanvas
                             root={currentStepData.treeState}
                             highlightedKeys={currentStepData.highlightedNodeKeys}
@@ -288,6 +297,9 @@ export default function RedBlackTreeVisualiser() {
                             hoveredAddress={hoveredAddress}
                             onHoverAddress={setHoveredAddress}
                         />
+                        
+                        <ResizeHandle />
+
                         <div className="absolute bottom-4 left-4 p-2 bg-background/90 backdrop-blur rounded-md border text-xs shadow-sm flex flex-col gap-1.5 pointer-events-none">
                             <div className="font-semibold text-muted-foreground mb-0.5">Legend</div>
                             <div className="flex items-center gap-2">
@@ -356,26 +368,31 @@ export default function RedBlackTreeVisualiser() {
                 break;
             case 'controls':
                 content = (
-                    <Controls
-                        keyToInsert={keyToInsert}
-                        setKeyToInsert={setKeyToInsert}
-                        submitInsert={submitInsert}
-                        keyToDelete={keyToDelete}
-                        setKeyToDelete={setKeyToDelete}
-                        submitDelete={submitDelete}
-                        keyToFind={keyToFind}
-                        setKeyToFind={setKeyToFind}
-                        submitFind={submitFind}
-                        onBulkRandom={onBulkRandom}
-                        onClear={onClear}
-                        activeTab={activeTab}
-                        onTabChange={setActiveTab}
-                    />
+                    // HEIGHT: 154px
+                    <div className="h-[154px] w-full">
+                        <Controls
+                            keyToInsert={keyToInsert}
+                            setKeyToInsert={setKeyToInsert}
+                            submitInsert={submitInsert}
+                            keyToDelete={keyToDelete}
+                            setKeyToDelete={setKeyToDelete}
+                            submitDelete={submitDelete}
+                            keyToFind={keyToFind}
+                            setKeyToFind={setKeyToFind}
+                            submitFind={submitFind}
+                            onBulkRandom={onBulkRandom}
+                            onClear={onClear}
+                            activeTab={activeTab}
+                            onTabChange={setActiveTab}
+                            className="h-full"
+                        />
+                    </div>
                 );
                 break;
             case 'pseudocode':
                 content = (
-                    <div className="h-[450px] w-full">
+                    // HEIGHT: 384px (Calculated: 554 - 154 - 16 = 384)
+                    <div className="h-[384px] w-full">
                         <PseudocodePanel
                             mode={pseudocodeMode}
                             activeLineNumbers={activeLinesToRender}
@@ -400,7 +417,7 @@ export default function RedBlackTreeVisualiser() {
 
     return (
         <>
-            <div className="min-h-screen w-full bg-gradient-to-b from-white to-slate-50 p-4 md:p-6 dark:from-background dark:to-slate-950">
+            <div className="min-h-screen w-full bg-background p-4 md:p-6">
                 <div className="mx-auto max-w-7xl">
                     <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-4 relative z-50">
                         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Red–Black Tree Visualiser</h1>

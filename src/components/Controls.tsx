@@ -1,11 +1,12 @@
 // src/components/Controls.tsx
 
-import React from 'react'; // Removed useState
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedTabs, AnimatedTabsContent, AnimatedTabsList, AnimatedTabsTrigger } from "@/components/ui/animated-tabs";
 import { Trash2, Plus, Shuffle, Loader2, Search } from "lucide-react";
 import { OperationForm } from './OperationForm';
+import { cn } from "@/lib/utils"; 
 
 interface ControlsProps {
     keyToInsert: string;
@@ -19,9 +20,9 @@ interface ControlsProps {
     submitFind: () => void;
     onBulkRandom: () => void;
     onClear: () => void;
-    // New props for controlled tab state
     activeTab: string;
     onTabChange: (val: string) => void;
+    className?: string; 
 }
 
 export function Controls({
@@ -29,63 +30,73 @@ export function Controls({
                              keyToDelete, setKeyToDelete, submitDelete,
                              keyToFind, setKeyToFind, submitFind,
                              onBulkRandom, onClear,
-                             activeTab, onTabChange
-                         }: ControlsProps) {
+                             activeTab, onTabChange,
+                             className 
+                          }: ControlsProps) {
 
     return (
-        <Card>
-            <CardHeader><CardTitle>Controls</CardTitle></CardHeader>
-            <CardContent>
-                <AnimatedTabs value={activeTab} onValueChange={onTabChange}>
-                    <AnimatedTabsList>
-                        <AnimatedTabsTrigger value="insert">Insert</AnimatedTabsTrigger>
-                        <AnimatedTabsTrigger value="delete">Delete</AnimatedTabsTrigger>
-                        <AnimatedTabsTrigger value="find">Find</AnimatedTabsTrigger>
-                        <AnimatedTabsTrigger value="more">More</AnimatedTabsTrigger>
+        <Card className={cn("flex flex-col h-full", className)}>
+            <CardHeader className="px-6 pt-4 pb-2 shrink-0"> 
+                <CardTitle className="text-base">Controls</CardTitle>
+            </CardHeader>
+            
+            <CardContent className="px-6 pt-0 pb-4 flex-1 overflow-hidden"> 
+                <AnimatedTabs value={activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
+                    <AnimatedTabsList className="h-8 w-full shrink-0">
+                        <AnimatedTabsTrigger value="insert" className="text-xs h-6">Insert</AnimatedTabsTrigger>
+                        <AnimatedTabsTrigger value="delete" className="text-xs h-6">Delete</AnimatedTabsTrigger>
+                        <AnimatedTabsTrigger value="find" className="text-xs h-6">Find</AnimatedTabsTrigger>
+                        <AnimatedTabsTrigger value="more" className="text-xs h-6">More</AnimatedTabsTrigger>
                     </AnimatedTabsList>
 
-                    <AnimatedTabsContent value="insert" className="space-y-3 pt-4">
-                        <OperationForm
-                            value={keyToInsert}
-                            setValue={setKeyToInsert}
-                            onSubmit={submitInsert}
-                            buttonText="Insert"
-                            buttonVariant="outline"
-                            buttonIcon={<Plus />}
-                            isActive={activeTab === 'insert'}
-                        />
-                    </AnimatedTabsContent>
+                    <div className="mt-3 flex-1">
+                        <AnimatedTabsContent value="insert" className="mt-0">
+                            <OperationForm
+                                value={keyToInsert}
+                                setValue={setKeyToInsert}
+                                onSubmit={submitInsert}
+                                buttonText="Insert"
+                                buttonVariant="default" // CHANGED: Make this Primary (Blue)
+                                buttonIcon={<Plus />}
+                                isActive={activeTab === 'insert'}
+                            />
+                        </AnimatedTabsContent>
 
-                    <AnimatedTabsContent value="delete" className="space-y-3 pt-4">
-                        <OperationForm
-                            value={keyToDelete}
-                            setValue={setKeyToDelete}
-                            onSubmit={submitDelete}
-                            buttonText="Delete"
-                            buttonVariant="destructive"
-                            buttonIcon={<Trash2 />}
-                            isActive={activeTab === 'delete'}
-                        />
-                    </AnimatedTabsContent>
+                        <AnimatedTabsContent value="delete" className="mt-0">
+                            <OperationForm
+                                value={keyToDelete}
+                                setValue={setKeyToDelete}
+                                onSubmit={submitDelete}
+                                buttonText="Delete"
+                                buttonVariant="destructive"
+                                buttonIcon={<Trash2 />}
+                                isActive={activeTab === 'delete'}
+                            />
+                        </AnimatedTabsContent>
 
-                    <AnimatedTabsContent value="find" className="space-y-3 pt-4">
-                        <OperationForm
-                            value={keyToFind}
-                            setValue={setKeyToFind}
-                            onSubmit={submitFind}
-                            buttonText="Find"
-                            buttonVariant="outline"
-                            buttonIcon={<Search />}
-                            isActive={activeTab === 'find'}
-                        />
-                    </AnimatedTabsContent>
+                        <AnimatedTabsContent value="find" className="mt-0">
+                            <OperationForm
+                                value={keyToFind}
+                                setValue={setKeyToFind}
+                                onSubmit={submitFind}
+                                buttonText="Find"
+                                buttonVariant="outline"
+                                buttonIcon={<Search />}
+                                isActive={activeTab === 'find'}
+                            />
+                        </AnimatedTabsContent>
 
-                    <AnimatedTabsContent value="more" className="space-y-3 pt-4">
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" onClick={onBulkRandom}><Shuffle />Random 10</Button>
-                            <Button variant="secondary" onClick={onClear}><Loader2 />Reset Tree</Button>
-                        </div>
-                    </AnimatedTabsContent>
+                        <AnimatedTabsContent value="more" className="mt-0">
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={onBulkRandom} className="h-9 text-xs">
+                                    <Shuffle className="mr-1.5 h-3.5 w-3.5" />Random 10
+                                </Button>
+                                <Button variant="secondary" size="sm" onClick={onClear} className="h-9 text-xs">
+                                    <Loader2 className="mr-1.5 h-3.5 w-3.5" />Reset Tree
+                                </Button>
+                            </div>
+                        </AnimatedTabsContent>
+                    </div>
                 </AnimatedTabs>
             </CardContent>
         </Card>

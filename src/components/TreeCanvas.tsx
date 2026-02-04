@@ -6,6 +6,7 @@ import { TreeNode, Color } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { cn } from '@/lib/utils';
 
 interface TreeCanvasProps {
     root: TreeNode | null;
@@ -30,13 +31,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
     const svgRef = useRef<SVGSVGElement | null>(null);
     const gRef = useRef<SVGGElement>(null);
     
-    // Track if we have performed the initial centering for this tree instance
     const isViewCentered = useRef(false); 
 
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const zoomBehavior = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
-    // 1. Handle Resize Observer
     useLayoutEffect(() => {
         const updateSize = () => {
             if (containerRef.current) {
@@ -58,7 +57,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     const { nodes, links } = useTreeLayout(root);
 
-    // 2. Helper to calculate the bounding box of the tree
     const getTreeBounds = useCallback((nodes: RBTHierarchyPointNode[], padding = 40) => {
         if (nodes.length === 0) return null;
         
@@ -81,7 +79,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         };
     }, []);
 
-    // 3. Smart Zoom-to-Fit Logic
     const zoomToFit = useCallback(() => {
         if (!containerRef.current || !svgRef.current || !zoomBehavior.current || nodes.length === 0) return;
         
@@ -95,7 +92,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         const scaleY = height / bounds.height;
         let targetScale = Math.min(scaleX, scaleY);
         
-        // Limit zoom out/in
         targetScale = Math.min(targetScale, 1.2); 
 
         const targetX = (width / 2) - (bounds.centerX * targetScale);
@@ -113,18 +109,15 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         isViewCentered.current = true;
     }, [nodes, getTreeBounds]);
 
-    // 4. Auto-Fit Effect: Runs whenever tree shape or window size changes
     useEffect(() => {
         if (!root || !svgRef.current || nodes.length === 0 || dimensions.width === 0) return;
 
-        // If zoom hasn't been initialized yet, skip
         if (!zoomBehavior.current) return;
 
         const bounds = getTreeBounds(nodes);
         if (!bounds) return;
 
         const svg = d3.select(svgRef.current);
-        // Safety check if D3 selection is valid
         if (svg.empty()) return;
 
         const currentTransform = d3.zoomTransform(svg.node()!);
@@ -146,7 +139,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     }, [nodes, dimensions, root, getTreeBounds, zoomToFit]);
 
-    // 5. Initialize Zoom - FIX: Added [root] dependency
     useEffect(() => {
         if (!root || !svgRef.current || !gRef.current) return;
 
@@ -163,15 +155,12 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
         svg.call(zoomBehavior.current);
 
-        // If this is the first render of the SVG (root became non-null), fit view immediately
         if (!isViewCentered.current) {
-            // We need a slight delay to ensure layout is calculated
             setTimeout(() => zoomToFit(), 0);
         }
 
     }, [root, zoomToFit]); 
 
-    // Reset centered flag when clearing tree
     useEffect(() => {
         if (!root) {
             isViewCentered.current = false;
@@ -196,7 +185,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     return (
         <div ref={containerRef} className="h-full w-full relative overflow-hidden bg-dot-pattern group">
-            {/* Floating Controls */}
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                  <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={handleZoomIn} title="Zoom In">
                     <ZoomIn className="size-4" />
@@ -278,7 +266,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                         <circle
                                             r={NODE_RADIUS}
                                             fill={isRed ? 'var(--destructive)' : 'var(--foreground)'}
-                                            stroke="var(--background)"
+                                            // CHANGED: Use --card color for stroke to blend with the card background
+                                            stroke="var(--card)"
                                             strokeWidth={colorBlindMode ? 3 : 2}
                                             strokeDasharray={colorBlindMode && isRed ? "4 3" : "none"}
                                             className="drop-shadow-sm"
