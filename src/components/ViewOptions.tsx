@@ -1,12 +1,10 @@
 // src/components/ViewOptions.tsx
 
-//import React, { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card } from "@/components/ui/card"
-import { LayoutTemplate, ChevronDown, Eye, Accessibility } from "lucide-react"
-//import { Separator } from "@/components/ui/separator" 
+import { LayoutTemplate, ChevronDown, Eye, Accessibility} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 
 interface ViewOptionsProps {
@@ -24,6 +22,8 @@ interface ViewOptionsProps {
     setColorBlindMode: (val: boolean) => void
     showAddresses: boolean
     setShowAddresses: (val: boolean) => void
+    showIsomorphic: boolean
+    setShowIsomorphic: (val: boolean) => void
 }
 
 export function ViewOptions({
@@ -33,7 +33,8 @@ export function ViewOptions({
                                 showControls, setShowControls,
                                 showMemory, setShowMemory,
                                 colorBlindMode, setColorBlindMode,
-                                showAddresses, setShowAddresses
+                                showAddresses, setShowAddresses,
+                                showIsomorphic, setShowIsomorphic
                             }: ViewOptionsProps) {
     const [isOpen, setIsOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
@@ -85,6 +86,13 @@ export function ViewOptions({
                                         <span className="text-[10px] text-muted-foreground">Hex instead of Keys</span>
                                     </div>
                                     <Switch id="addr-mode" checked={showAddresses} onCheckedChange={setShowAddresses} />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <Label htmlFor="iso-mode" className="cursor-pointer font-normal">Show 2-3-4 Structure</Label>
+                                        <span className="text-[10px] text-muted-foreground">Group nodes visually</span>
+                                    </div>
+                                    <Switch id="iso-mode" checked={showIsomorphic} onCheckedChange={setShowIsomorphic} />
                                 </div>
                             </div>
                         </div>

@@ -57,7 +57,8 @@ export default function RedBlackTreeVisualiser() {
     const [visualSettings, setVisualSettings] = useState<VisualSettings>({
         colorBlindMode: false,
         showAddresses: false,
-        showNils: false 
+        showNils: false,
+        showIsomorphic: false // Added setting
     });
 
     // --- Interaction State (Visuals) ---
@@ -178,6 +179,7 @@ export default function RedBlackTreeVisualiser() {
                             hoveredAddress={hoveredAddress}
                             onHoverAddress={setHoveredAddress}
                             onResetContainerSize={resetTreeSize}
+                            showIsomorphic={visualSettings.showIsomorphic} 
                         />
                         {/* Quiz Overlay Positioned Over TreeCanvas */}
                         {isQuizActive && algorithm.currentStepData.questionData && (
@@ -316,6 +318,7 @@ export default function RedBlackTreeVisualiser() {
                                 showControls={viewState.showControls} setShowControls={(v) => setViewState(p => ({...p, showControls: v}))}
                                 colorBlindMode={visualSettings.colorBlindMode} setColorBlindMode={(v) => setVisualSettings(p => ({...p, colorBlindMode: v}))}
                                 showAddresses={visualSettings.showAddresses} setShowAddresses={(v) => setVisualSettings(p => ({...p, showAddresses: v}))}
+                                showIsomorphic={visualSettings.showIsomorphic} setShowIsomorphic={(v) => setVisualSettings(p => ({...p, showIsomorphic: v}))}
                             />
                             <div className="h-6 w-px bg-border mx-1" />
                             <DarkModeToggle />
