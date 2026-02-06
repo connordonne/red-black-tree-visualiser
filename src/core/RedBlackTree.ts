@@ -23,6 +23,65 @@ export class TreeNode {
     }
 }
 
+export type HealthStatus = 'healthy' | 'warning' | 'critical';
+
+export interface TreeHealth {
+    status: HealthStatus;
+    score: number;
+    message: string;
+}
+
+function calculateBlackHeightStats(node: TreeNode | null): { min: number, max: number, valid: boolean } {
+    let min = Infinity;
+    let max = -Infinity;
+
+    const traverse = (n: TreeNode | null, currentBh: number) => {
+        if (!n) {
+            const leafBh = currentBh + 1;
+            min = Math.min(min, leafBh);
+            max = Math.max(max, leafBh);
+            return;
+        }
+
+        const nextBh = currentBh + (n.color === Color.BLACK ? 1 : 0);
+        traverse(n.left, nextBh);
+        traverse(n.right, nextBh);
+    }
+
+    traverse(node, 0);
+
+    if (min === Infinity) return { min: 1, max: 1, valid: true };
+    return { min, max, valid: min === max };
+}
+
+function hasRedRedConflict(node: TreeNode | null): boolean {
+    if (!node) return false;
+    if (node.color === Color.RED) {
+        if (node.left?.color === Color.RED) return true;
+        if (node.right?.color === Color.RED) return true;
+    }
+    return hasRedRedConflict(node.left) || hasRedRedConflict(node.right);
+}
+
+export const analyzeTreeHealth = (root: TreeNode | null): TreeHealth => {
+    if (!root) return { status: 'healthy', score: 100, message: "System Stable" };
+
+    if (root.color === Color.RED) {
+        return { status: 'critical', score: 45, message: "Critical: Root is RED (Prop 2)" };
+    }
+
+    const bh = calculateBlackHeightStats(root);
+    if (!bh.valid) {
+        return { status: 'critical', score: 30, message: "Critical: Black-Height Violation (Prop 5)" };
+    }
+
+    if (hasRedRedConflict(root)) {
+        return { status: 'warning', score: 70, message: "Warning: Red-Red Infection (Prop 4)" };
+    }
+
+    return { status: 'healthy', score: 100, message: "System Stable" };
+};
+
 // --- Quiz Interface ---
 export interface QuizOption {
     id: string;
@@ -100,27 +159,7 @@ export class RedBlackTree {
     }
 
     getBlackHeightStats(): { min: number, max: number, valid: boolean } {
-        let min = Infinity;
-        let max = -Infinity;
-        
-        const traverse = (node: TreeNode | null, currentBh: number) => {
-            if (!node) {
-                const leafBh = currentBh + 1;
-                min = Math.min(min, leafBh);
-                max = Math.max(max, leafBh);
-                return;
-            }
-            
-            const nextBh = currentBh + (node.color === Color.BLACK ? 1 : 0);
-            traverse(node.left, nextBh);
-            traverse(node.right, nextBh);
-        }
-        
-        traverse(this.root, 0);
-        
-        if (min === Infinity) return { min: 1, max: 1, valid: true }; 
-        
-        return { min, max, valid: min === max };
+        return calculateBlackHeightStats(this.root);
     }
 
     private addStep(

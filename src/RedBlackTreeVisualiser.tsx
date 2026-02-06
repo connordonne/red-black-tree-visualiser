@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { animate } from "framer-motion";
@@ -21,6 +21,7 @@ import { QuizOverlay } from "@/components/QuizOverlay";
 // Hooks & Types
 import { useAlgorithmPlayer } from "@/hooks/useAlgorithmPlayer";
 import { useDashboardLayout } from "@/hooks/useDashboardLayout";
+import { analyzeTreeHealth } from "@/core/RedBlackTree";
 import type { WidgetId, ViewState, VisualSettings } from "@/types/visualiser";
 import { cn } from "@/lib/utils";
 import { ANNOTATIONS } from "@/lib/pseudocode";
@@ -152,6 +153,11 @@ export default function RedBlackTreeVisualiser() {
         
     };
 
+    // --- Health Analysis ---
+    const treeHealth = useMemo(() => {
+        return analyzeTreeHealth(algorithm.currentStepData.treeState);
+    }, [algorithm.currentStepData.treeState]);
+
     // --- Widget Rendering ---
     const renderWidget = (id: WidgetId) => {
         const viewKey = `show${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof ViewState;
@@ -212,11 +218,12 @@ export default function RedBlackTreeVisualiser() {
                 break;
             case 'explanation':
                 content = (
-                    <div className="h-[85px] w-full">
+                    <div className="h-[120px] w-full">
                         <ExplanationBox
                             description={algorithm.currentStepData.description}
                             currentStep={algorithm.currentStepIndex + 1}
                             totalSteps={algorithm.steps.length}
+                            health={treeHealth}
                             className="h-full"
                         />
                     </div>
