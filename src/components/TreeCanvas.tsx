@@ -19,6 +19,7 @@ interface TreeCanvasProps {
     hoveredAddress?: number | null;
     onHoverAddress?: (addr: number | null) => void;
     onResetContainerSize?: () => void;
+    showIsomorphic?: boolean; 
 }
 
 const NODE_RADIUS = 22;
@@ -32,7 +33,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    toggleNils,
                                                    hoveredAddress = null,
                                                    onHoverAddress,
-                                                   onResetContainerSize
+                                                   onResetContainerSize,
+                                                   showIsomorphic = false
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -63,6 +65,47 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
     }, []);
 
     const { nodes, links } = useTreeLayout(root, showNils);
+
+    const isomorphicGroups = useMemo(() => {
+        if (!showIsomorphic) return [];
+        const groups: RBTHierarchyPointNode[][] = [];
+
+        nodes.forEach(node => {
+            
+            if (node.data.color === Color.BLACK) {
+                const currentGroup = [node];
+                
+                if (node.children) {
+                    node.children.forEach(child => {
+                        const childNode = child as RBTHierarchyPointNode;
+                        if (childNode.data.color === Color.RED) {
+                            currentGroup.push(childNode);
+                        }
+                    });
+                }
+                groups.push(currentGroup);
+            }
+        });
+        return groups;
+    }, [nodes, showIsomorphic]);
+
+    const getGroupRect = (group: RBTHierarchyPointNode[]) => {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        group.forEach(n => {
+            minX = Math.min(minX, n.x);
+            maxX = Math.max(maxX, n.x);
+            minY = Math.min(minY, n.y);
+            maxY = Math.max(maxY, n.y);
+        });
+        const padding = 28; 
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: (maxX - minX) + (padding * 2),
+            height: (maxY - minY) + (padding * 2),
+            rx: 20 
+        };
+    };
 
     const activePath = useMemo(() => {
         if (hoveredAddress === null) return new Set<number>();
@@ -172,7 +215,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
              zoomToFit();
         }
 
-    }, [nodes, dimensions, root, getTreeBounds, zoomToFit]);
+    }, [nodes, dimensions, root, getTreeBounds, zoomToFit]); 
 
     useEffect(() => {
         if (!root || !svgRef.current || !gRef.current) return;
@@ -259,6 +302,36 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                     <rect width="100%" height="100%" fill="transparent" />
                     
                     <g ref={gRef}>
+                        <AnimatePresence>
+                            {isomorphicGroups.map((group) => {
+                                const rect = getGroupRect(group);
+                                const key = `group-${group[0].data.key}-${group[0].data.address}`; 
+                                return (
+                                    <motion.rect
+                                        key={key}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ 
+                                            opacity: 1, 
+                                            x: rect.x, 
+                                            y: rect.y, 
+                                            width: rect.width, 
+                                            height: rect.height 
+                                        }}
+                                        exit={{ opacity: 0 }}
+                                        transition={transition}
+                                        rx={rect.rx}
+                                        fill="var(--chart-5)"
+                                        fillOpacity={0.15}
+                                        stroke="var(--chart-5)"
+                                        strokeOpacity={0.4}
+                                        strokeWidth={1.5}
+                                        strokeDasharray="6 4"
+                                        className="pointer-events-none"
+                                    />
+                                );
+                            })}
+                        </AnimatePresence>
+
                         <AnimatePresence>
                             {links.map((link) => (
                                 <motion.path
