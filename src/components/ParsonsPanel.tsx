@@ -12,9 +12,9 @@ import {
   KeyboardSensor,
   PointerSensor,
   useSensor,
-  useSensors
+  useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
@@ -81,15 +81,15 @@ export function ParsonsPanel({ data, onComplete, className }: ParsonsPanelProps)
     });
 
     const [isSuccess, setIsSuccess] = useState(false);
-    const [isError, setIsError] = useState(false); // State for error feedback
-    const [attempts, setAttempts] = useState(0);
+    const [isError, setIsError] = useState(false); 
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    const handleDragStart = (event: DragStartEvent) => {
+    // REMOVED: 'event' argument was unused
+    const handleDragStart = () => {
         // Clear error state as soon as user starts trying to fix it
         if (isError) setIsError(false);
     };
@@ -115,7 +115,7 @@ export function ParsonsPanel({ data, onComplete, className }: ParsonsPanelProps)
             setIsSuccess(true);
             setIsError(false);
         } else {
-            setAttempts(p => p + 1);
+            // REMOVED: 'attempts' state was unused
             setIsError(true);
             
             // Auto-hide error visual on items after 2 seconds, but keep message until interaction
@@ -129,7 +129,6 @@ export function ParsonsPanel({ data, onComplete, className }: ParsonsPanelProps)
         setItems(shuffled);
         setIsSuccess(false);
         setIsError(false);
-        setAttempts(0);
     }, [data]);
 
     return (
