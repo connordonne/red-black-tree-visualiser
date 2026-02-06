@@ -40,16 +40,21 @@ export function useAlgorithmPlayer() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [steps.length]);
 
-    // Auto-play timer
     useEffect(() => {
         let timer: number;
+
+        if (isPlaying && steps[currentStepIndex]?.requiresInteraction) {
+            setIsPlaying(false);
+            return;
+        }
+
         if (isPlaying && currentStepIndex < steps.length - 1) {
             timer = window.setTimeout(() => setCurrentStepIndex(p => p + 1), playbackSpeed);
         } else if (isPlaying && currentStepIndex >= steps.length - 1) {
             setIsPlaying(false);
         }
         return () => clearTimeout(timer);
-    }, [isPlaying, currentStepIndex, steps.length, playbackSpeed]);
+    }, [isPlaying, currentStepIndex, steps, playbackSpeed]);
 
     const runOperation = useCallback((
         operationFn: (tree: RedBlackTree) => Step[], 
@@ -57,11 +62,9 @@ export function useAlgorithmPlayer() {
     ) => {
         const lastStep = steps[steps.length - 1];
         
-        // Reconstruct tree from last state to ensure continuity
         const reconstruction = new RedBlackTree();
         reconstruction.root = lastStep.treeState;
         
-        // Clone for the operation to avoid mutating the history directly
         const workingTree = reconstruction.clone();
         
         const newSteps = operationFn(workingTree);
@@ -69,7 +72,7 @@ export function useAlgorithmPlayer() {
 
         const stepsWithMeta = newSteps.map(s => ({ ...s, operationType: opType }));
         setSteps(prev => [...prev, ...stepsWithMeta]);
-        setCurrentStepIndex(steps.length); // Jump to start of new operation
+        setCurrentStepIndex(steps.length); 
         setIsPlaying(true);
     }, [steps]);
 

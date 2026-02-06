@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { animate } from "framer-motion";
@@ -16,6 +16,7 @@ import { MemoryGrid } from "@/components/MemoryGrid";
 import { NodeInspector } from "@/components/NodeInspector";
 import { ViewOptions } from "@/components/ViewOptions";
 import { SortableItem } from "@/components/SortableItem";
+import { QuizOverlay } from "@/components/QuizOverlay";
 
 // Hooks & Types
 import { useAlgorithmPlayer } from "@/hooks/useAlgorithmPlayer";
@@ -36,6 +37,14 @@ export default function RedBlackTreeVisualiser() {
     const [inputs, setInputs] = useState({ insert: "", delete: "", find: "" });
     const [activeTab, setActiveTab] = useState("insert");
     
+    // --- Interaction State ---
+    const [quizSolved, setQuizSolved] = useState(false);
+    
+    // Reset quiz solved state when changing steps
+    useEffect(() => {
+        setQuizSolved(false);
+    }, [algorithm.currentStepIndex]);
+
     // --- View & Visual Options ---
     const [viewState, setViewState] = useState<ViewState>({
         showTree: true,
@@ -49,7 +58,7 @@ export default function RedBlackTreeVisualiser() {
         showAddresses: false
     });
 
-    // --- Interaction State ---
+    // --- Interaction State (Visuals) ---
     const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
     const [hoveredAddress, setHoveredAddress] = useState<number | null>(null);
     
@@ -127,15 +136,24 @@ export default function RedBlackTreeVisualiser() {
         : [];
 
     const isSidebarVisible = layout.columns.sidebar.some(id => {
-        if (id === 'player') return true; // Player always visible if in sidebar
+        if (id === 'player') return true; 
         const key = `show${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof ViewState;
         return viewState[key];
     });
 
+    const isQuizActive = algorithm.currentStepData.requiresInteraction && 
+                         algorithm.currentStepData.questionData && 
+                         !quizSolved;
+
+    const handleQuizComplete = () => {
+        setQuizSolved(true);
+        algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
+        
+    };
+
     // --- Widget Rendering ---
     const renderWidget = (id: WidgetId) => {
         const viewKey = `show${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof ViewState;
-        // Player doesn't have a toggle, always true
         if (id !== 'player' && !viewState[viewKey]) return null;
 
         let content;
@@ -152,7 +170,14 @@ export default function RedBlackTreeVisualiser() {
                             onHoverAddress={setHoveredAddress}
                             onResetContainerSize={resetTreeSize}
                         />
-                        <div onMouseDown={handleResizeMouseDown} className="absolute bottom-0 right-0 p-2 cursor-ns-resize z-50 opacity-30 group-hover:opacity-100 transition-opacity">
+                        {/* Quiz Overlay Positioned Over TreeCanvas */}
+                        {isQuizActive && algorithm.currentStepData.questionData && (
+                            <QuizOverlay 
+                                data={algorithm.currentStepData.questionData} 
+                                onComplete={handleQuizComplete} 
+                            />
+                        )}
+                        <div onMouseDown={handleResizeMouseDown} className="absolute bottom-0 right-0 p-2 cursor-ns-resize z-40 opacity-30 group-hover:opacity-100 transition-opacity">
                             <svg width="16" height="16" viewBox="0 0 12 12" fill="none" className="text-muted-foreground"><path d="M10 2L2 10M10 6L6 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                         </div>
                     </div>
@@ -197,21 +222,24 @@ export default function RedBlackTreeVisualiser() {
             case 'player':
                 content = (
                     <div className="h-[85px] w-full">
-                        <PlayerControls
-                            isPlaying={algorithm.isPlaying}
-                            onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
-                            onNext={() => algorithm.setCurrentStepIndex(Math.min(algorithm.steps.length - 1, algorithm.currentStepIndex + 1))}
-                            onPrev={() => algorithm.setCurrentStepIndex(Math.max(0, algorithm.currentStepIndex - 1))}
-                            onStart={() => algorithm.setCurrentStepIndex(0)}
-                            onEnd={() => algorithm.setCurrentStepIndex(algorithm.steps.length - 1)}
-                            onReset={algorithm.resetAnimation}
-                            currentStep={algorithm.currentStepIndex}
-                            setCurrentStep={algorithm.setCurrentStepIndex}
-                            totalSteps={algorithm.steps.length}
-                            speed={algorithm.playbackSpeed}
-                            setSpeed={algorithm.setPlaybackSpeed}
-                            className="h-full"
-                        />
+                        <div className={cn("h-full relative", isQuizActive && "pointer-events-none opacity-50 transition-opacity")}>
+                             {/* Disable player controls during quiz */}
+                            <PlayerControls
+                                isPlaying={algorithm.isPlaying}
+                                onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
+                                onNext={() => algorithm.setCurrentStepIndex(Math.min(algorithm.steps.length - 1, algorithm.currentStepIndex + 1))}
+                                onPrev={() => algorithm.setCurrentStepIndex(Math.max(0, algorithm.currentStepIndex - 1))}
+                                onStart={() => algorithm.setCurrentStepIndex(0)}
+                                onEnd={() => algorithm.setCurrentStepIndex(algorithm.steps.length - 1)}
+                                onReset={algorithm.resetAnimation}
+                                currentStep={algorithm.currentStepIndex}
+                                setCurrentStep={algorithm.setCurrentStepIndex}
+                                totalSteps={algorithm.steps.length}
+                                speed={algorithm.playbackSpeed}
+                                setSpeed={algorithm.setPlaybackSpeed}
+                                className="h-full"
+                            />
+                        </div>
                     </div>
                 );
                 break;
