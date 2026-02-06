@@ -1,18 +1,21 @@
 // src/components/TreeCanvas.tsx
-import React, { useRef, useState, useLayoutEffect, useEffect, useCallback } from 'react';
+
+import React, { useRef, useState, useLayoutEffect, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as d3 from 'd3'; 
 import { TreeNode, Color } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize, Minimize2 } from "lucide-react";
-//import { cn } from '@/lib/utils';
+import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal } from "lucide-react";
+import { cn } from '@/lib/utils';
 
 interface TreeCanvasProps {
     root: TreeNode | null;
     highlightedKeys?: number[];
     colorBlindMode?: boolean;
     showAddresses?: boolean;
+    showNils?: boolean;
+    toggleNils?: () => void;
     hoveredAddress?: number | null;
     onHoverAddress?: (addr: number | null) => void;
     onResetContainerSize?: () => void;
@@ -25,6 +28,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    highlightedKeys = [],
                                                    colorBlindMode = false,
                                                    showAddresses = false,
+                                                   showNils = false,
+                                                   toggleNils,
                                                    hoveredAddress = null,
                                                    onHoverAddress,
                                                    onResetContainerSize
@@ -57,7 +62,35 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         return () => resizeObserver.disconnect();
     }, []);
 
-    const { nodes, links } = useTreeLayout(root);
+    const { nodes, links } = useTreeLayout(root, showNils);
+
+    const activePath = useMemo(() => {
+        if (hoveredAddress === null) return new Set<number>();
+        
+        const pathSet = new Set<number>();
+        const targetNode = nodes.find(n => n.data.address === hoveredAddress);
+        
+        if (targetNode) {
+            let current: RBTHierarchyPointNode | null = targetNode;
+            while (current) {
+                pathSet.add(current.data.address);
+                current = current.parent;
+            }
+        }
+        return pathSet;
+    }, [hoveredAddress, nodes]);
+
+    const getOpacity = (nodeAddress: number) => {
+        if (hoveredAddress === null) return 1;
+        return activePath.has(nodeAddress) ? 1 : 0.15;
+    };
+    
+    const getLinkOpacity = (link: RBTHierarchyPointLink) => {
+        if (hoveredAddress === null) return link.target.data.isDummy ? 0.3 : 1; 
+        
+        const targetInPath = activePath.has(link.target.data.address);
+        return targetInPath ? 1 : 0.1;
+    }
 
     const getTreeBounds = useCallback((nodes: RBTHierarchyPointNode[], padding = 40) => {
         if (nodes.length === 0) return null;
@@ -145,7 +178,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         if (!root || !svgRef.current || !gRef.current) return;
 
         const svg = d3.select(svgRef.current);
-        //const g = d3.select(gRef.current);
 
         zoomBehavior.current = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
@@ -179,8 +211,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         d3.select(svgRef.current).transition().call(zoomBehavior.current.scaleBy, 0.8);
     };
 
-    const nodeKey = (d: RBTHierarchyPointNode) => `node-${d.data.key}-${d.data.address}`;
-    const linkKey = (d: RBTHierarchyPointLink) => `link-${d.source.data.key}-${d.target.data.key}`;
+    const nodeKey = (d: RBTHierarchyPointNode) => `node-${d.data.key}-${d.data.address}-${d.data.isDummy ? 'dummy' : 'real'}`;
+    const linkKey = (d: RBTHierarchyPointLink) => `link-${d.source.data.key}-${d.target.data.key}-${d.target.data.address}`;
 
     const transition: any = { type: 'spring', stiffness: 300, damping: 30 };
     const toHex = (n: number) => `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
@@ -189,7 +221,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
     return (
         <div ref={containerRef} className="h-full w-full relative overflow-hidden bg-dot-pattern group">
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={handleZoomIn} title="Zoom In">
+                <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={handleZoomIn} title="Zoom In">
                     <ZoomIn className="size-4" />
                 </Button>
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={handleZoomOut} title="Zoom Out">
@@ -198,6 +230,19 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={zoomToFit} title="Fit to View">
                     <Maximize className="size-4" />
                 </Button>
+                
+                {toggleNils && (
+                    <Button 
+                        variant={showNils ? "default" : "secondary"} 
+                        size="icon" 
+                        className={cn("h-8 w-8 shadow-sm backdrop-blur transition-colors", !showNils && "bg-background/80")}
+                        onClick={toggleNils} 
+                        title={showNils ? "Hide NIL Nodes" : "Show NIL Nodes (Black Height)"}
+                    >
+                        <GitCommitHorizontal className="size-4" />
+                    </Button>
+                )}
+
                 {onResetContainerSize && (
                     <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={onResetContainerSize} title="Reset Container Size">
                         <Minimize2 className="size-4" />
@@ -220,15 +265,15 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     key={linkKey(link)}
                                     initial={{ opacity: 0, pathLength: 0 }}
                                     animate={{
-                                        opacity: 1,
+                                        opacity: getLinkOpacity(link),
                                         pathLength: 1,
                                         d: `M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`
                                     }}
                                     exit={{ opacity: 0 }}
                                     transition={transition}
-                                    stroke="var(--muted-foreground)"
-                                    strokeWidth={2}
-                                    strokeOpacity={0.4}
+                                    stroke={link.target.data.isDummy ? "var(--muted-foreground)" : "var(--foreground)"}
+                                    strokeWidth={link.target.data.isDummy ? 1 : 2}
+                                    strokeDasharray={link.target.data.isDummy ? "4 4" : "none"}
                                     fill="none"
                                 />
                             ))}
@@ -236,15 +281,60 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
                         <AnimatePresence>
                             {nodes.map((node) => {
+                                const isDummy = node.data.isDummy;
                                 const isHighlighted = highlightedKeys.includes(node.data.key);
                                 const isHovered = hoveredAddress === node.data.address;
                                 const isRed = node.data.color === Color.RED;
+                                const opacity = getOpacity(node.data.address);
+
+                                if (isDummy) {
+                                    return (
+                                        <motion.g
+                                            key={nodeKey(node)}
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: opacity, scale: 1, x: node.x, y: node.y }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            transition={transition}
+                                            className="cursor-help"
+                                            onMouseEnter={() => onHoverAddress?.(node.data.address)}
+                                            onMouseLeave={() => onHoverAddress?.(null)}
+                                        >
+                                            <rect
+                                                x={-16}
+                                                y={-10}
+                                                width={32}
+                                                height={20}
+                                                rx={4}
+                                                fill={node.isInvalidBlackHeight ? "var(--destructive)" : "var(--muted)"}
+                                                className={cn(
+                                                    "stroke-border transition-colors duration-300",
+                                                    node.isInvalidBlackHeight && "animate-pulse"
+                                                )}
+                                                strokeWidth={1}
+                                            />
+                                            <text
+                                                textAnchor="middle"
+                                                dy=".35em"
+                                                className="font-mono text-[10px] font-bold fill-white pointer-events-none"
+                                            >
+                                                {node.blackDepth}
+                                            </text>
+                                            <text
+                                                textAnchor="middle"
+                                                dy="2.2em"
+                                                className="font-sans text-[9px] fill-muted-foreground font-medium pointer-events-none"
+                                            >
+                                                NIL
+                                            </text>
+                                        </motion.g>
+                                    );
+                                }
 
                                 return (
                                     <motion.g
                                         key={nodeKey(node)}
                                         initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1, x: node.x, y: node.y }}
+                                        animate={{ opacity: opacity, scale: 1, x: node.x, y: node.y }}
                                         exit={{ opacity: 0, scale: 0.5 }}
                                         transition={transition}
                                         onMouseEnter={() => onHoverAddress?.(node.data.address)}
@@ -262,6 +352,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 strokeWidth={3}
                                             />
                                         )}
+                                        
                                         {isHovered && (
                                             <motion.circle
                                                 r={NODE_RADIUS + 4}
@@ -280,6 +371,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                             strokeWidth={2}
                                             strokeDasharray={colorBlindMode && isRed ? "4 3" : "none"}
                                         />
+                                        
                                         <text
                                             textAnchor="middle"
                                             dy=".3em"

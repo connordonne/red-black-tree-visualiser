@@ -55,7 +55,8 @@ export default function RedBlackTreeVisualiser() {
     });
     const [visualSettings, setVisualSettings] = useState<VisualSettings>({
         colorBlindMode: false,
-        showAddresses: false
+        showAddresses: false,
+        showNils: false 
     });
 
     // --- Interaction State (Visuals) ---
@@ -166,6 +167,8 @@ export default function RedBlackTreeVisualiser() {
                             highlightedKeys={algorithm.currentStepData.highlightedNodeKeys}
                             colorBlindMode={visualSettings.colorBlindMode}
                             showAddresses={visualSettings.showAddresses}
+                            showNils={visualSettings.showNils}  
+                            toggleNils={() => setVisualSettings(p => ({ ...p, showNils: !p.showNils }))} 
                             hoveredAddress={hoveredAddress}
                             onHoverAddress={setHoveredAddress}
                             onResetContainerSize={resetTreeSize}

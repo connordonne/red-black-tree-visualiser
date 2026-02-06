@@ -99,6 +99,30 @@ export class RedBlackTree {
         return newTree;
     }
 
+    getBlackHeightStats(): { min: number, max: number, valid: boolean } {
+        let min = Infinity;
+        let max = -Infinity;
+        
+        const traverse = (node: TreeNode | null, currentBh: number) => {
+            if (!node) {
+                const leafBh = currentBh + 1;
+                min = Math.min(min, leafBh);
+                max = Math.max(max, leafBh);
+                return;
+            }
+            
+            const nextBh = currentBh + (node.color === Color.BLACK ? 1 : 0);
+            traverse(node.left, nextBh);
+            traverse(node.right, nextBh);
+        }
+        
+        traverse(this.root, 0);
+        
+        if (min === Infinity) return { min: 1, max: 1, valid: true }; 
+        
+        return { min, max, valid: min === max };
+    }
+
     private addStep(
         steps: Step[], 
         description: string, 

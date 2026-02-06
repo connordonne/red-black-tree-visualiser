@@ -11,4 +11,5 @@ export interface ViewState {
 export interface VisualSettings {
     colorBlindMode: boolean;
     showAddresses: boolean;
+    showNils: boolean; 
 }

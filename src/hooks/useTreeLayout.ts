@@ -2,87 +2,102 @@
 
 import { useMemo } from 'react';
 import * as d3 from 'd3';
-import { TreeNode } from '@/core/RedBlackTree';
+import { TreeNode, Color } from '@/core/RedBlackTree';
 
 export type { TreeNode };
 
-// Internal interface to track dummy nodes
 interface VisualTreeNode extends TreeNode {
     isDummy?: boolean;
 }
 
-export interface RBTHierarchyPointNode extends d3.HierarchyPointNode<TreeNode> {
-    data: TreeNode;
+export interface RBTHierarchyPointNode extends d3.HierarchyPointNode<VisualTreeNode> {
+    data: VisualTreeNode;
+    blackDepth: number; 
+    isInvalidBlackHeight?: boolean;
 }
 
-export interface RBTHierarchyPointLink extends d3.HierarchyPointLink<TreeNode> {
+export interface RBTHierarchyPointLink extends d3.HierarchyPointLink<VisualTreeNode> {
     source: RBTHierarchyPointNode;
     target: RBTHierarchyPointNode;
 }
 
 const NODE_SIZE: [number, number] = [60, 80];
 
-export const useTreeLayout = (rootNode: TreeNode | null) => {
+export const useTreeLayout = (rootNode: TreeNode | null, showNils: boolean = false) => {
     const treeLayout = useMemo(() => {
         if (!rootNode) {
             return { nodes: [], links: [] };
         }
 
-        // 1. Create Hierarchy with Dummy Nodes
         const hierarchy = d3.hierarchy<VisualTreeNode>(rootNode, d => {
             if (d.isDummy) return undefined;
 
             const left = d.left;
             const right = d.right;
 
-            // If it's a leaf, no children
-            if (!left && !right) return undefined;
+            if (!showNils && !left && !right) return undefined;
 
             const children: VisualTreeNode[] = [];
 
-            // Handle Left Child
             if (left) {
                 children.push(left);
-            } else {
+            } else if (showNils) {
                 const dummy = new TreeNode(0) as VisualTreeNode;
                 dummy.isDummy = true;
+                dummy.color = Color.BLACK;
+                dummy.address = (d.address * 1000) + 1; 
                 children.push(dummy);
             }
 
-            // Handle Right Child
             if (right) {
                 children.push(right);
-            } else {
+            } else if (showNils) {
                 const dummy = new TreeNode(0) as VisualTreeNode;
                 dummy.isDummy = true;
+                dummy.color = Color.BLACK;
+                dummy.address = (d.address * 1000) + 2;
                 children.push(dummy);
             }
 
-            return children;
+            return children.length > 0 ? children : undefined;
         });
 
-        // 2. Generate Layout
         const treeGenerator = d3.tree<VisualTreeNode>()
             .nodeSize(NODE_SIZE)
             .separation((a, b) => {
+                if (a.data.isDummy || b.data.isDummy) return 0.8;
                 return a.parent === b.parent ? 1.2 : 1.5;
             });
 
-        const treeData = treeGenerator(hierarchy);
+        const treeData = treeGenerator(hierarchy) as RBTHierarchyPointNode;
 
-        // 3. Filter out Dummies
-        const allNodes = treeData.descendants();
-        const allLinks = treeData.links();
+        treeData.eachBefore((node) => {
+            const isNodeBlack = node.data.color === Color.BLACK;
+            const parentBlackDepth = node.parent ? (node.parent as RBTHierarchyPointNode).blackDepth : 0;
+            node.blackDepth = parentBlackDepth + (isNodeBlack ? 1 : 0);
+        });
 
-        // Ensure we explicitly declare 'nodes' here
-        const nodes = allNodes.filter(d => !d.data.isDummy) as RBTHierarchyPointNode[];
-        
-        const links = allLinks.filter(link => 
-            !link.source.data.isDummy && !link.target.data.isDummy
-        ) as RBTHierarchyPointLink[];
+        if (showNils) {
+            const leaves = treeData.leaves() as RBTHierarchyPointNode[];
+            const dummyLeaves = leaves.filter(l => l.data.isDummy);
+            
+            if (dummyLeaves.length > 0) {
+                const firstDepth = dummyLeaves[0].blackDepth;
+                const isConsistent = dummyLeaves.every(l => l.blackDepth === firstDepth);
+                
+                if (!isConsistent) {
+                    dummyLeaves.forEach(l => l.isInvalidBlackHeight = true);
+                }
+            }
+        }
+
+        const allNodes = treeData.descendants() as RBTHierarchyPointNode[];
+        const allLinks = treeData.links() as RBTHierarchyPointLink[];
+        const nodes = allNodes.filter(d => showNils || !d.data.isDummy);
+        const links = allLinks.filter(link => showNils || (!link.source.data.isDummy && !link.target.data.isDummy));
 
         return { nodes, links };
-    }, [rootNode]);
+    }, [rootNode, showNils]);
 
     return treeLayout;
 };
