@@ -12,6 +12,7 @@ import { ExplanationBox } from "@/components/ExplanationBox";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
 import { PseudocodePanel } from "@/components/PseudocodePanel";
+import { ParsonsPanel } from "@/components/ParsonsPanel";
 import { MemoryGrid } from "@/components/MemoryGrid";
 import { NodeInspector } from "@/components/NodeInspector";
 import { ViewOptions } from "@/components/ViewOptions";
@@ -40,10 +41,25 @@ export default function RedBlackTreeVisualiser() {
     
     // --- Interaction State ---
     const [quizSolved, setQuizSolved] = useState(false);
+    const [parsonsSolved, setParsonsSolved] = useState(false);
     
-    // Reset quiz solved state when changing steps
+    // Reset interaction states when changing steps
     useEffect(() => {
+        // Only reset if we move to a different step index
+        // We need to keep solved state if we stay on same step (re-renders)
+        // But since currentStepIndex changes on navigation, this is fine
+        // Note: For quiz/parsons, moving to *next* step triggers the effect.
+        if (!algorithm.isPlaying) {
+             // Logic handled by the navigation handlers mostly, but strictly tracking index helps
+        }
+    }, [algorithm.currentStepIndex]);
+
+    useEffect(() => {
+        // When step changes, check if new step requires interaction. If not, reset solved flags.
+        // If it does, they start as false.
+        // We use a simple ref tracking or just effect on index change
         setQuizSolved(false);
+        setParsonsSolved(false);
     }, [algorithm.currentStepIndex]);
 
     // --- View & Visual Options ---
@@ -58,7 +74,7 @@ export default function RedBlackTreeVisualiser() {
         colorBlindMode: false,
         showAddresses: false,
         showNils: false,
-        showIsomorphic: false // Added setting
+        showIsomorphic: false
     });
 
     // --- Interaction State (Visuals) ---
@@ -144,6 +160,7 @@ export default function RedBlackTreeVisualiser() {
         return viewState[key];
     });
 
+    // Quiz Check
     const isQuizActive = algorithm.currentStepData.requiresInteraction && 
                          algorithm.currentStepData.questionData && 
                          !quizSolved;
@@ -151,7 +168,16 @@ export default function RedBlackTreeVisualiser() {
     const handleQuizComplete = () => {
         setQuizSolved(true);
         algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
-        
+    };
+
+    // Parsons Check
+    const isParsonsActive = algorithm.currentStepData.requiresInteraction && 
+                            algorithm.currentStepData.parsonsData && 
+                            !parsonsSolved;
+
+    const handleParsonsComplete = () => {
+        setParsonsSolved(true);
+        algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
     };
 
     // --- Health Analysis ---
@@ -168,19 +194,30 @@ export default function RedBlackTreeVisualiser() {
         switch (id) {
             case 'tree':
                 content = (
-                    <div ref={treeContainerRef} className="h-[554px] w-full rounded-xl border bg-card relative min-h-[300px] group overflow-hidden">
-                        <TreeCanvas
-                            root={algorithm.currentStepData.treeState}
-                            highlightedKeys={algorithm.currentStepData.highlightedNodeKeys}
-                            colorBlindMode={visualSettings.colorBlindMode}
-                            showAddresses={visualSettings.showAddresses}
-                            showNils={visualSettings.showNils}  
-                            toggleNils={() => setVisualSettings(p => ({ ...p, showNils: !p.showNils }))} 
-                            hoveredAddress={hoveredAddress}
-                            onHoverAddress={setHoveredAddress}
-                            onResetContainerSize={resetTreeSize}
-                            showIsomorphic={visualSettings.showIsomorphic} 
-                        />
+                    <div ref={treeContainerRef} className="h-[554px] w-full rounded-xl border bg-card relative min-h-[300px] group overflow-hidden transition-colors">
+                        <div className={cn("absolute inset-0 z-0 transition-opacity duration-500", isParsonsActive ? "opacity-30 blur-sm scale-[0.98]" : "opacity-100")}>
+                            <TreeCanvas
+                                root={algorithm.currentStepData.treeState}
+                                highlightedKeys={algorithm.currentStepData.highlightedNodeKeys}
+                                colorBlindMode={visualSettings.colorBlindMode}
+                                showAddresses={visualSettings.showAddresses}
+                                showNils={visualSettings.showNils}  
+                                toggleNils={() => setVisualSettings(p => ({ ...p, showNils: !p.showNils }))} 
+                                hoveredAddress={hoveredAddress}
+                                onHoverAddress={setHoveredAddress}
+                                onResetContainerSize={resetTreeSize}
+                                showIsomorphic={visualSettings.showIsomorphic} 
+                            />
+                        </div>
+                        {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
+                        {isParsonsActive && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/20 backdrop-blur-[2px]">
+                                <div className="bg-card/90 p-4 rounded-lg shadow-lg border max-w-sm text-center">
+                                    <p className="font-semibold text-muted-foreground">Construct the Rotation Logic</p>
+                                    <p className="text-xs text-muted-foreground/70 mt-1">Focus on the code panel to proceed.</p>
+                                </div>
+                            </div>
+                        )}
                         {/* Quiz Overlay Positioned Over TreeCanvas */}
                         {isQuizActive && algorithm.currentStepData.questionData && (
                             <QuizOverlay 
@@ -234,8 +271,8 @@ export default function RedBlackTreeVisualiser() {
             case 'player':
                 content = (
                     <div className="h-[85px] w-full">
-                        <div className={cn("h-full relative", isQuizActive && "pointer-events-none opacity-50 transition-opacity")}>
-                             {/* Disable player controls during quiz */}
+                        <div className={cn("h-full relative", (isQuizActive || isParsonsActive) && "pointer-events-none opacity-50 transition-opacity")}>
+                             {/* Disable player controls during quiz or parsons */}
                             <PlayerControls
                                 isPlaying={algorithm.isPlaying}
                                 onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
@@ -272,16 +309,29 @@ export default function RedBlackTreeVisualiser() {
                 );
                 break;
             case 'pseudocode':
-                content = (
-                    <div className="h-[384px] w-full">
-                        <PseudocodePanel
-                            mode={pseudocodeMode}
-                            activeLineNumbers={activeLines}
-                            annotations={ANNOTATIONS[pseudocodeMode]}
-                            className="h-full"
-                        />
-                    </div>
-                );
+                // REPLACED: If Parsons is active, show ParsonsPanel instead of PseudocodePanel
+                if (isParsonsActive && algorithm.currentStepData.parsonsData) {
+                    content = (
+                        <div className="h-[384px] w-full">
+                            <ParsonsPanel 
+                                data={algorithm.currentStepData.parsonsData} 
+                                onComplete={handleParsonsComplete} 
+                                className="h-full bg-card shadow-md ring-4 ring-primary/20"
+                            />
+                        </div>
+                    );
+                } else {
+                    content = (
+                        <div className="h-[384px] w-full">
+                            <PseudocodePanel
+                                mode={pseudocodeMode}
+                                activeLineNumbers={activeLines}
+                                annotations={ANNOTATIONS[pseudocodeMode]}
+                                className="h-full"
+                            />
+                        </div>
+                    );
+                }
                 break;
         }
 

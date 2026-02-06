@@ -95,6 +95,13 @@ export interface QuizData {
     options: QuizOption[];
 }
 
+// --- Parsons Interface ---
+export interface ParsonsData {
+    lines: { id: string, text: string }[];
+    solutionIds: string[];
+    title: string;
+}
+
 export interface Step {
     treeState: TreeNode | null;
     description: string;
@@ -103,9 +110,10 @@ export interface Step {
     operationType?: 'insert' | 'delete' | 'find';
     requiresInteraction?: boolean;
     questionData?: QuizData;
+    parsonsData?: ParsonsData;
 }
 
-// --- Predefined Quizzes ---
+// --- Predefined Content ---
 const QUIZZES = {
     case1: {
         question: "Violation: Red Parent and Red Uncle. How do we resolve this?",
@@ -131,6 +139,31 @@ const QUIZZES = {
             { id: 'q3-opt3', text: "Push Black Down", isCorrect: false, feedback: "The Uncle is Black (or NIL), so we cannot push Black down onto it." }
         ]
     } as QuizData
+};
+
+const PARSONS_PROBLEMS = {
+    leftRotate: {
+        title: "Build Left-Rotate Logic",
+        lines: [
+            { id: 'p1', text: "y = x.right" },
+            { id: 'p2', text: "x.right = y.left" },
+            { id: 'p3', text: "y.parent = x.parent" },
+            { id: 'p4', text: "y.left = x" },
+            { id: 'p5', text: "x.parent = y" }
+        ],
+        solutionIds: ['p1', 'p2', 'p3', 'p4', 'p5']
+    } as ParsonsData,
+    rightRotate: {
+        title: "Build Right-Rotate Logic",
+        lines: [
+            { id: 'p1', text: "x = y.left" },
+            { id: 'p2', text: "y.left = x.right" },
+            { id: 'p3', text: "x.parent = y.parent" },
+            { id: 'p4', text: "x.right = y" },
+            { id: 'p5', text: "y.parent = x" }
+        ],
+        solutionIds: ['p1', 'p2', 'p3', 'p4', 'p5']
+    } as ParsonsData
 };
 
 
@@ -169,7 +202,8 @@ export class RedBlackTree {
         pseudocodeLines: number[] = [],
         operationType?: 'insert' | 'delete' | 'find',
         requiresInteraction: boolean = false,
-        questionData?: QuizData
+        questionData?: QuizData,
+        parsonsData?: ParsonsData
     ) {
         steps.push({
             treeState: this.cloneNode(this.root, null),
@@ -178,13 +212,27 @@ export class RedBlackTree {
             pseudocodeLines,
             operationType,
             requiresInteraction,
-            questionData
+            questionData,
+            parsonsData
         });
     }
 
     private leftRotate(x: TreeNode, steps: Step[], lines: number[] = []): void {
         const y = x.right;
         if (!y) return;
+        
+        // Parsons Scaffolding Point
+        this.addStep(
+            steps, 
+            `Preparing Left Rotation around ${x.key}. Arrange the logic pointers.`, 
+            [x.key, y.key], 
+            lines, 
+            undefined, 
+            true, 
+            undefined,
+            PARSONS_PROBLEMS.leftRotate
+        );
+
         x.right = y.left;
         if (y.left !== null) y.left.parent = x;
         y.parent = x.parent;
@@ -193,12 +241,26 @@ export class RedBlackTree {
         else x.parent.right = y;
         y.left = x;
         x.parent = y;
-        this.addStep(steps, `Left rotate around ${x.key}`, [x.key, y.key], lines);
+        
+        this.addStep(steps, `Left rotate around ${x.key} complete.`, [x.key, y.key], lines);
     }
 
     private rightRotate(y: TreeNode, steps: Step[], lines: number[] = []): void {
         const x = y.left;
         if (!x) return;
+
+        // Parsons Scaffolding Point
+        this.addStep(
+            steps, 
+            `Preparing Right Rotation around ${y.key}. Arrange the logic pointers.`, 
+            [y.key, x.key], 
+            lines, 
+            undefined, 
+            true, 
+            undefined,
+            PARSONS_PROBLEMS.rightRotate
+        );
+
         y.left = x.right;
         if (x.right !== null) x.right.parent = y;
         x.parent = y.parent;
@@ -207,7 +269,8 @@ export class RedBlackTree {
         else y.parent.left = x;
         x.right = y;
         y.parent = x;
-        this.addStep(steps, `Right rotate around ${y.key}`, [y.key, x.key], lines);
+        
+        this.addStep(steps, `Right rotate around ${y.key} complete.`, [y.key, x.key], lines);
     }
 
     insert(key: number): Step[] {
