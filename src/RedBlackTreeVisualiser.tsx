@@ -31,8 +31,17 @@ import { ANNOTATIONS } from "@/lib/pseudocode";
 const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdIkCdd6WXNjq6hFFK8U1Gc6wWRps3Z7NsZ2Qy4yHjZUAaKtg/viewform?usp=publish-editor"; 
 
 export default function RedBlackTreeVisualiser() {
+    // --- View & Visual Options (Moved up for hook dependency) ---
+    const [visualSettings, setVisualSettings] = useState<VisualSettings>({
+        colorBlindMode: false,
+        showAddresses: false,
+        showNils: false,
+        showIsomorphic: false,
+        tutorialMode: true // Default enabled
+    });
+
     // --- State Logic ---
-    const algorithm = useAlgorithmPlayer();
+    const algorithm = useAlgorithmPlayer(visualSettings.tutorialMode);
     const layout = useDashboardLayout();
 
     // --- Inputs State ---
@@ -45,36 +54,17 @@ export default function RedBlackTreeVisualiser() {
     
     // Reset interaction states when changing steps
     useEffect(() => {
-        // Only reset if we move to a different step index
-        // We need to keep solved state if we stay on same step (re-renders)
-        // But since currentStepIndex changes on navigation, this is fine
-        // Note: For quiz/parsons, moving to *next* step triggers the effect.
-        if (!algorithm.isPlaying) {
-             // Logic handled by the navigation handlers mostly, but strictly tracking index helps
-        }
-    }, [algorithm.currentStepIndex]);
-
-    useEffect(() => {
         // When step changes, check if new step requires interaction. If not, reset solved flags.
-        // If it does, they start as false.
-        // We use a simple ref tracking or just effect on index change
         setQuizSolved(false);
         setParsonsSolved(false);
     }, [algorithm.currentStepIndex]);
 
-    // --- View & Visual Options ---
     const [viewState, setViewState] = useState<ViewState>({
         showTree: true,
         showMemory: false,
         showExplanation: true,
         showPseudocode: true,
         showControls: true
-    });
-    const [visualSettings, setVisualSettings] = useState<VisualSettings>({
-        colorBlindMode: false,
-        showAddresses: false,
-        showNils: false,
-        showIsomorphic: false
     });
 
     // --- Interaction State (Visuals) ---
@@ -160,8 +150,9 @@ export default function RedBlackTreeVisualiser() {
         return viewState[key];
     });
 
-    // Quiz Check
-    const isQuizActive = algorithm.currentStepData.requiresInteraction && 
+    // Quiz Check (Modified for Tutorial Mode)
+    const isQuizActive = visualSettings.tutorialMode &&
+                         algorithm.currentStepData.requiresInteraction && 
                          algorithm.currentStepData.questionData && 
                          !quizSolved;
 
@@ -170,8 +161,9 @@ export default function RedBlackTreeVisualiser() {
         algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
     };
 
-    // Parsons Check
-    const isParsonsActive = algorithm.currentStepData.requiresInteraction && 
+    // Parsons Check (Modified for Tutorial Mode)
+    const isParsonsActive = visualSettings.tutorialMode &&
+                            algorithm.currentStepData.requiresInteraction && 
                             algorithm.currentStepData.parsonsData && 
                             !parsonsSolved;
 
@@ -207,6 +199,7 @@ export default function RedBlackTreeVisualiser() {
                                 onHoverAddress={setHoveredAddress}
                                 onResetContainerSize={resetTreeSize}
                                 showIsomorphic={visualSettings.showIsomorphic} 
+                                canvasLabel={algorithm.currentStepData.canvasLabel}
                             />
                         </div>
                         {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
@@ -271,8 +264,8 @@ export default function RedBlackTreeVisualiser() {
             case 'player':
                 content = (
                     <div className="h-[85px] w-full">
-                        <div className={cn("h-full relative", (isQuizActive || isParsonsActive) && "pointer-events-none opacity-50 transition-opacity")}>
-                             {/* Disable player controls during quiz or parsons */}
+                        {/* UPDATED: Removed pointer-events-none so user can always reset/skip even if stuck in quiz mode */}
+                        <div className={cn("h-full relative", (isQuizActive || isParsonsActive) && "opacity-50 transition-opacity")}>
                             <PlayerControls
                                 isPlaying={algorithm.isPlaying}
                                 onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
@@ -369,6 +362,7 @@ export default function RedBlackTreeVisualiser() {
                                 colorBlindMode={visualSettings.colorBlindMode} setColorBlindMode={(v) => setVisualSettings(p => ({...p, colorBlindMode: v}))}
                                 showAddresses={visualSettings.showAddresses} setShowAddresses={(v) => setVisualSettings(p => ({...p, showAddresses: v}))}
                                 showIsomorphic={visualSettings.showIsomorphic} setShowIsomorphic={(v) => setVisualSettings(p => ({...p, showIsomorphic: v}))}
+                                tutorialMode={visualSettings.tutorialMode} setTutorialMode={(v) => setVisualSettings(p => ({...p, tutorialMode: v}))}
                             />
                             <div className="h-6 w-px bg-border mx-1" />
                             <DarkModeToggle />

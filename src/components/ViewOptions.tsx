@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card } from "@/components/ui/card"
-import { LayoutTemplate, ChevronDown, Eye, Accessibility} from "lucide-react"
+import { LayoutTemplate, ChevronDown, Eye, Accessibility, GraduationCap } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 
 interface ViewOptionsProps {
@@ -24,6 +24,8 @@ interface ViewOptionsProps {
     setShowAddresses: (val: boolean) => void
     showIsomorphic: boolean
     setShowIsomorphic: (val: boolean) => void
+    tutorialMode: boolean
+    setTutorialMode: (val: boolean) => void
 }
 
 export function ViewOptions({
@@ -34,7 +36,8 @@ export function ViewOptions({
                                 showMemory, setShowMemory,
                                 colorBlindMode, setColorBlindMode,
                                 showAddresses, setShowAddresses,
-                                showIsomorphic, setShowIsomorphic
+                                showIsomorphic, setShowIsomorphic,
+                                tutorialMode, setTutorialMode
                             }: ViewOptionsProps) {
     const [isOpen, setIsOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
@@ -67,6 +70,23 @@ export function ViewOptions({
             {isOpen && (
                 <Card className="absolute right-0 top-full mt-2 w-72 p-4 z-50 flex flex-col gap-4 shadow-xl animate-in fade-in zoom-in-95 duration-200 border-border/50">
                     <div className="space-y-4">
+                        
+                        <div>
+                            <div className="flex items-center gap-2 mb-3 text-primary">
+                                <GraduationCap className="size-4" />
+                                <h4 className="font-medium text-sm">Learning Mode</h4>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <Label htmlFor="tut-mode" className="cursor-pointer font-normal">Interactive Quizzes</Label>
+                                    <span className="text-[10px] text-muted-foreground">Pause for Quizzes & Parsons</span>
+                                </div>
+                                <Switch id="tut-mode" checked={tutorialMode} onCheckedChange={setTutorialMode} />
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-border" />
+
                         <div>
                             <div className="flex items-center gap-2 mb-3 text-primary">
                                 <Accessibility className="size-4" />

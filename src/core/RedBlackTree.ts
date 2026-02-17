@@ -31,6 +31,8 @@ export interface TreeHealth {
     message: string;
 }
 
+// ... [Existing Health Analysis Functions: calculateBlackHeightStats, hasRedRedConflict, analyzeTreeHealth] ... 
+
 function calculateBlackHeightStats(node: TreeNode | null): { min: number, max: number, valid: boolean } {
     let min = Infinity;
     let max = -Infinity;
@@ -102,6 +104,13 @@ export interface ParsonsData {
     title: string;
 }
 
+// --- Visual Canvas Label Interface ---
+export interface CanvasLabel {
+    text: string;
+    targetNodeKey: number;
+    type?: 'info' | 'warning' | 'success' | 'rotation';
+}
+
 export interface Step {
     treeState: TreeNode | null;
     description: string;
@@ -111,9 +120,10 @@ export interface Step {
     requiresInteraction?: boolean;
     questionData?: QuizData;
     parsonsData?: ParsonsData;
+    canvasLabel?: CanvasLabel; // Added Label Support
 }
 
-// --- Predefined Content ---
+// --- Predefined Content (Quizzes/Parsons) ---
 const QUIZZES = {
     case1: {
         question: "Violation: Red Parent and Red Uncle. How do we resolve this?",
@@ -203,7 +213,8 @@ export class RedBlackTree {
         operationType?: 'insert' | 'delete' | 'find',
         requiresInteraction: boolean = false,
         questionData?: QuizData,
-        parsonsData?: ParsonsData
+        parsonsData?: ParsonsData,
+        canvasLabel?: CanvasLabel // New Optional Parameter
     ) {
         steps.push({
             treeState: this.cloneNode(this.root, null),
@@ -213,7 +224,8 @@ export class RedBlackTree {
             operationType,
             requiresInteraction,
             questionData,
-            parsonsData
+            parsonsData,
+            canvasLabel
         });
     }
 
@@ -221,7 +233,7 @@ export class RedBlackTree {
         const y = x.right;
         if (!y) return;
         
-        // Parsons Scaffolding Point
+        // Parsons Scaffolding Point with Visual Label
         this.addStep(
             steps, 
             `Preparing Left Rotation around ${x.key}. Arrange the logic pointers.`, 
@@ -230,7 +242,8 @@ export class RedBlackTree {
             undefined, 
             true, 
             undefined,
-            PARSONS_PROBLEMS.leftRotate
+            PARSONS_PROBLEMS.leftRotate,
+            { text: "Rotate Left ↺", targetNodeKey: x.key, type: 'rotation' }
         );
 
         x.right = y.left;
@@ -249,7 +262,7 @@ export class RedBlackTree {
         const x = y.left;
         if (!x) return;
 
-        // Parsons Scaffolding Point
+        // Parsons Scaffolding Point with Visual Label
         this.addStep(
             steps, 
             `Preparing Right Rotation around ${y.key}. Arrange the logic pointers.`, 
@@ -258,7 +271,8 @@ export class RedBlackTree {
             undefined, 
             true, 
             undefined,
-            PARSONS_PROBLEMS.rightRotate
+            PARSONS_PROBLEMS.rightRotate,
+            { text: "Rotate Right ↻", targetNodeKey: y.key, type: 'rotation' }
         );
 
         y.left = x.right;
@@ -330,7 +344,9 @@ export class RedBlackTree {
                         [21, 22, 23, 24], 
                         undefined, 
                         true, 
-                        QUIZZES.case1
+                        QUIZZES.case1,
+                        undefined,
+                        { text: "Uncle is RED", targetNodeKey: uncle.key, type: 'warning' }
                     );
                     
                     z.parent.color = Color.BLACK;
@@ -349,7 +365,9 @@ export class RedBlackTree {
                             [26, 27, 28],
                             undefined,
                             true,
-                            QUIZZES.case2
+                            QUIZZES.case2,
+                            undefined,
+                            { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' }
                         );
                         
                         z = z.parent;
@@ -364,7 +382,9 @@ export class RedBlackTree {
                         [29, 30],
                         undefined,
                         true,
-                        QUIZZES.case3
+                        QUIZZES.case3,
+                        undefined,
+                        { text: "Line Shape", targetNodeKey: grandparent.key, type: 'info' }
                     );
                     
                     z.parent!.color = Color.BLACK;
@@ -381,10 +401,12 @@ export class RedBlackTree {
                         steps, 
                         "Case 1: Red Parent, Red Uncle.", 
                         [...highlightKeys, uncle.key], 
-                        [34, 35, 36, 37],
+                        [34, 35, 36, 37], 
+                        undefined, 
+                        true, 
+                        QUIZZES.case1,
                         undefined,
-                        true,
-                        QUIZZES.case1
+                        { text: "Uncle is RED", targetNodeKey: uncle.key, type: 'warning' }
                     );
 
                     z.parent.color = Color.BLACK;
@@ -402,7 +424,9 @@ export class RedBlackTree {
                             [39, 40, 41],
                             undefined,
                             true,
-                            QUIZZES.case2
+                            QUIZZES.case2,
+                            undefined,
+                            { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' }
                         );
 
                         z = z.parent;
@@ -417,7 +441,9 @@ export class RedBlackTree {
                         [42, 43],
                         undefined,
                         true,
-                        QUIZZES.case3
+                        QUIZZES.case3,
+                        undefined,
+                        { text: "Line Shape", targetNodeKey: grandparent.key, type: 'info' }
                     );
 
                     z.parent!.color = Color.BLACK;
@@ -520,7 +546,7 @@ export class RedBlackTree {
                 let sibling = parentOfCurrent.right;
                 if (sibling === null) break;
                 if (sibling.color === Color.RED) {
-                    this.addStep(steps, "Sibling is RED (Case 1). Recolor and Rotate Left.", [...highlightBase, sibling.key], [24, 25, 26, 27]);
+                    this.addStep(steps, "Sibling is RED (Case 1). Recolor and Rotate Left.", [...highlightBase, sibling.key], [24, 25, 26, 27], undefined, false, undefined, undefined, { text: "Sibling Red", targetNodeKey: sibling.key, type: 'warning'});
                     sibling.color = Color.BLACK;
                     parentOfCurrent.color = Color.RED;
                     this.leftRotate(parentOfCurrent, steps, [27]);
@@ -538,7 +564,7 @@ export class RedBlackTree {
                     this.addStep(steps, "Case 2 complete. Move x up.", current ? [current.key] : [], [31]);
                 } else {
                     if (isRightChildBlack) {
-                        this.addStep(steps, "Sibling Right Child is BLACK (Case 3). Recolor and Rotate Right.", [...highlightBase, sibling.key], [32, 33, 34, 35]);
+                        this.addStep(steps, "Sibling Right Child is BLACK (Case 3). Recolor and Rotate Right.", [...highlightBase, sibling.key], [32, 33, 34, 35], undefined, false, undefined, undefined, { text: "Close Nephew Red", targetNodeKey: sibling.left ? sibling.left.key : sibling.key, type: 'info' });
                         if (sibling.left) sibling.left.color = Color.BLACK;
                         sibling.color = Color.RED;
                         this.rightRotate(sibling, steps, [35]);
@@ -546,7 +572,7 @@ export class RedBlackTree {
                         if (sibling === null) break;
                         this.addStep(steps, "Case 3 complete. New sibling found.", [], [36]);
                     }
-                    this.addStep(steps, "Sibling Right Child is RED (Case 4). Recolor and Rotate Left.", [...highlightBase, sibling.key], [37, 38, 39, 40]);
+                    this.addStep(steps, "Sibling Right Child is RED (Case 4). Recolor and Rotate Left.", [...highlightBase, sibling.key], [37, 38, 39, 40], undefined, false, undefined, undefined, { text: "Far Nephew Red", targetNodeKey: sibling.right ? sibling.right.key : sibling.key, type: 'info' });
                     sibling.color = parentOfCurrent.color;
                     parentOfCurrent.color = Color.BLACK;
                     if (sibling.right) sibling.right.color = Color.BLACK;
@@ -558,7 +584,7 @@ export class RedBlackTree {
                 let sibling = parentOfCurrent.left;
                 if (sibling === null) break;
                 if (sibling.color === Color.RED) {
-                    this.addStep(steps, "Sibling is RED (Case 1 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [44, 45, 46, 47]);
+                    this.addStep(steps, "Sibling is RED (Case 1 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [44, 45, 46, 47], undefined, false, undefined, undefined, { text: "Sibling Red", targetNodeKey: sibling.key, type: 'warning'});
                     sibling.color = Color.BLACK;
                     parentOfCurrent.color = Color.RED;
                     this.rightRotate(parentOfCurrent, steps, [47]);
@@ -574,14 +600,14 @@ export class RedBlackTree {
                     parentOfCurrent = current.parent;
                 } else {
                     if (isLeftChildBlack) {
-                        this.addStep(steps, "Sibling Left Child is BLACK (Case 3 Sym). Recolor and Rotate Left.", [...highlightBase, sibling.key], [52, 53, 54, 55]);
+                        this.addStep(steps, "Sibling Left Child is BLACK (Case 3 Sym). Recolor and Rotate Left.", [...highlightBase, sibling.key], [52, 53, 54, 55], undefined, false, undefined, undefined, { text: "Close Nephew Red", targetNodeKey: sibling.right ? sibling.right.key : sibling.key, type: 'info' });
                         if (sibling.right) sibling.right.color = Color.BLACK;
                         sibling.color = Color.RED;
                         this.leftRotate(sibling, steps, [55]);
                         sibling = parentOfCurrent.left;
                         if (sibling === null) break;
                     }
-                    this.addStep(steps, "Sibling Left Child is RED (Case 4 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [57, 58, 59, 60]);
+                    this.addStep(steps, "Sibling Left Child is RED (Case 4 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [57, 58, 59, 60], undefined, false, undefined, undefined, { text: "Far Nephew Red", targetNodeKey: sibling.left ? sibling.left.key : sibling.key, type: 'info' });
                     sibling.color = parentOfCurrent.color;
                     parentOfCurrent.color = Color.BLACK;
                     if (sibling.left) sibling.left.color = Color.BLACK;

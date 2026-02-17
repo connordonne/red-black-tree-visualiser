@@ -4,6 +4,7 @@ import React, { useRef, useState, useLayoutEffect, useEffect, useCallback, useMe
 import { motion, AnimatePresence } from 'framer-motion';
 import * as d3 from 'd3'; 
 import { TreeNode, Color } from '@/core/RedBlackTree';
+import type { CanvasLabel } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal } from "lucide-react";
@@ -19,7 +20,8 @@ interface TreeCanvasProps {
     hoveredAddress?: number | null;
     onHoverAddress?: (addr: number | null) => void;
     onResetContainerSize?: () => void;
-    showIsomorphic?: boolean; 
+    showIsomorphic?: boolean;
+    canvasLabel?: CanvasLabel; 
 }
 
 const NODE_RADIUS = 22;
@@ -34,7 +36,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    hoveredAddress = null,
                                                    onHoverAddress,
                                                    onResetContainerSize,
-                                                   showIsomorphic = false
+                                                   showIsomorphic = false,
+                                                   canvasLabel
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -65,6 +68,12 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
     }, []);
 
     const { nodes, links } = useTreeLayout(root, showNils);
+
+    // Calculate position for the label
+    const labelTarget = useMemo(() => {
+        if (!canvasLabel) return null;
+        return nodes.find(n => n.data.key === canvasLabel.targetNodeKey);
+    }, [canvasLabel, nodes]);
 
     const isomorphicGroups = useMemo(() => {
         if (!showIsomorphic) return [];
@@ -458,6 +467,34 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                 );
                             })}
                         </AnimatePresence>
+
+                        {/* Floating Canvas Labels */}
+                        <AnimatePresence>
+                            {labelTarget && canvasLabel && (
+                                <motion.g
+                                    key={`label-${canvasLabel.targetNodeKey}-${canvasLabel.text}`}
+                                    initial={{ opacity: 0, y: -5, scale: 0.9 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.3 }}
+                                    // UPDATED: Increased vertical offset to -85 to fully clear the node and highlight circle
+                                    transform={`translate(${labelTarget.x}, ${labelTarget.y - 85})`}
+                                    className="pointer-events-none"
+                                >
+                                    <foreignObject x="-60" y="-15" width="120" height="40" overflow="visible">
+                                        <div className={cn(
+                                            "flex items-center justify-center px-3 py-1.5 rounded-full shadow-lg border text-xs font-bold whitespace-nowrap w-fit mx-auto",
+                                            canvasLabel.type === 'warning' ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/80 dark:text-amber-100" :
+                                            canvasLabel.type === 'rotation' ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/80 dark:text-blue-100" :
+                                            "bg-background text-foreground border-border"
+                                        )}>
+                                            {canvasLabel.text}
+                                        </div>
+                                    </foreignObject>
+                                </motion.g>
+                            )}
+                        </AnimatePresence>
+
                     </g>
                 </svg>
             ) : (
