@@ -8,6 +8,7 @@ export type { TreeNode };
 
 interface VisualTreeNode extends TreeNode {
     isDummy?: boolean;
+    isSpacer?: boolean;
 }
 
 export interface RBTHierarchyPointNode extends d3.HierarchyPointNode<VisualTreeNode> {
@@ -30,7 +31,7 @@ export const useTreeLayout = (rootNode: TreeNode | null, showNils: boolean = fal
         }
 
         const hierarchy = d3.hierarchy<VisualTreeNode>(rootNode, d => {
-            if (d.isDummy) return undefined;
+            if (d.isDummy || d.isSpacer) return undefined;
 
             const left = d.left;
             const right = d.right;
@@ -41,22 +42,35 @@ export const useTreeLayout = (rootNode: TreeNode | null, showNils: boolean = fal
 
             if (left) {
                 children.push(left);
-            } else if (showNils) {
-                const dummy = new TreeNode(0) as VisualTreeNode;
-                dummy.isDummy = true;
-                dummy.color = Color.BLACK;
-                dummy.address = (d.address * 1000) + 1; 
-                children.push(dummy);
+            } else {
+                if (showNils) {
+                    const dummy = new TreeNode(0) as VisualTreeNode;
+                    dummy.isDummy = true;
+                    dummy.color = Color.BLACK;
+                    dummy.address = (d.address * 1000) + 1; 
+                    children.push(dummy);
+                } else if (right) {
+                    const spacer = new TreeNode(0) as VisualTreeNode;
+                    spacer.isSpacer = true;
+                    spacer.address = (d.address * 10000) + 1; 
+                    children.push(spacer);
+                }
             }
-
             if (right) {
                 children.push(right);
-            } else if (showNils) {
-                const dummy = new TreeNode(0) as VisualTreeNode;
-                dummy.isDummy = true;
-                dummy.color = Color.BLACK;
-                dummy.address = (d.address * 1000) + 2;
-                children.push(dummy);
+            } else {
+                if (showNils) {
+                    const dummy = new TreeNode(0) as VisualTreeNode;
+                    dummy.isDummy = true;
+                    dummy.color = Color.BLACK;
+                    dummy.address = (d.address * 1000) + 2;
+                    children.push(dummy);
+                } else if (left) {
+                    const spacer = new TreeNode(0) as VisualTreeNode;
+                    spacer.isSpacer = true;
+                    spacer.address = (d.address * 10000) + 2;
+                    children.push(spacer);
+                }
             }
 
             return children.length > 0 ? children : undefined;
@@ -65,8 +79,9 @@ export const useTreeLayout = (rootNode: TreeNode | null, showNils: boolean = fal
         const treeGenerator = d3.tree<VisualTreeNode>()
             .nodeSize(NODE_SIZE)
             .separation((a, b) => {
-                if (a.data.isDummy || b.data.isDummy) return 0.8;
-                return a.parent === b.parent ? 1.2 : 1.5;
+                const isSpecialNode = a.data.isDummy || b.data.isDummy || a.data.isSpacer || b.data.isSpacer;
+                if (isSpecialNode) return 1.25;
+                return a.parent === b.parent ? 2.0 : 3.0;
             });
 
         const treeData = treeGenerator(hierarchy) as RBTHierarchyPointNode;
@@ -93,8 +108,16 @@ export const useTreeLayout = (rootNode: TreeNode | null, showNils: boolean = fal
 
         const allNodes = treeData.descendants() as RBTHierarchyPointNode[];
         const allLinks = treeData.links() as RBTHierarchyPointLink[];
-        const nodes = allNodes.filter(d => showNils || !d.data.isDummy);
-        const links = allLinks.filter(link => showNils || (!link.source.data.isDummy && !link.target.data.isDummy));
+
+        const nodes = allNodes.filter(d => {
+            if (d.data.isSpacer) return false;
+            return showNils || !d.data.isDummy;
+        });
+
+        const links = allLinks.filter(link => {
+            if (link.target.data.isSpacer) return false;
+            return showNils || (!link.source.data.isDummy && !link.target.data.isDummy);
+        });
 
         return { nodes, links };
     }, [rootNode, showNils]);

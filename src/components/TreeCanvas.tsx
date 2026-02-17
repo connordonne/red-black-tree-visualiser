@@ -80,6 +80,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         const groups: RBTHierarchyPointNode[][] = [];
 
         nodes.forEach(node => {
+            // Exclude NIL nodes (dummies) from forming groups
+            if (node.data.isDummy) return;
             
             if (node.data.color === Color.BLACK) {
                 const currentGroup = [node];
@@ -353,7 +355,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     }}
                                     exit={{ opacity: 0 }}
                                     transition={transition}
-                                    stroke={link.target.data.isDummy ? "var(--muted-foreground)" : "var(--foreground)"}
+                                    stroke="var(--foreground)"
                                     strokeWidth={link.target.data.isDummy ? 1 : 2}
                                     strokeDasharray={link.target.data.isDummy ? "4 4" : "none"}
                                     fill="none"
@@ -387,12 +389,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 width={32}
                                                 height={20}
                                                 rx={4}
-                                                fill={node.isInvalidBlackHeight ? "var(--destructive)" : "var(--muted)"}
+                                                fill={node.isInvalidBlackHeight ? "var(--destructive)" : "#1e293b"}
                                                 className={cn(
-                                                    "stroke-border transition-colors duration-300",
+                                                    "transition-colors duration-300",
                                                     node.isInvalidBlackHeight && "animate-pulse"
                                                 )}
-                                                strokeWidth={1}
+                                                stroke={node.isInvalidBlackHeight ? "var(--destructive)" : "rgba(255, 255, 255, 0.6)"}
+                                                strokeWidth={2}
                                             />
                                             <text
                                                 textAnchor="middle"
@@ -434,7 +437,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 strokeWidth={3}
                                             />
                                         )}
-                                        
+                                    
                                         {isHovered && (
                                             <motion.circle
                                                 r={NODE_RADIUS + 4}
@@ -444,7 +447,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 strokeDasharray="4 4"
                                             />
                                         )}
-                                        
+                                    
                                         <circle
                                             r={NODE_RADIUS}
                                             className="drop-shadow-sm transition-all duration-300"
@@ -453,7 +456,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                             strokeWidth={2}
                                             strokeDasharray={colorBlindMode && isRed ? "4 3" : "none"}
                                         />
-                                        
+                                    
                                         <text
                                             textAnchor="middle"
                                             dy=".3em"
