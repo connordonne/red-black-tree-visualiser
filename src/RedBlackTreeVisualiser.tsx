@@ -139,7 +139,7 @@ export default function RedBlackTreeVisualiser() {
     };
 
     // --- Computed Data ---
-    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';    
+    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';     
     const activeLines = (algorithm.currentStepData.operationType === pseudocodeMode) 
         ? algorithm.currentStepData.pseudocodeLines 
         : [];
@@ -200,7 +200,7 @@ export default function RedBlackTreeVisualiser() {
                                 onResetContainerSize={resetTreeSize}
                                 showIsomorphic={visualSettings.showIsomorphic} 
                                 canvasLabel={algorithm.currentStepData.canvasLabel}
-                                searchFocus={algorithm.currentStepData.searchFocus}
+                                searchFocus={algorithm.currentStepData.searchFocus} // Pass the new prop
                             />
                         </div>
                         {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
@@ -265,18 +265,32 @@ export default function RedBlackTreeVisualiser() {
             case 'player':
                 content = (
                     <div className="h-[85px] w-full">
-                        {/* UPDATED: Removed pointer-events-none so user can always reset/skip even if stuck in quiz mode */}
                         <div className={cn("h-full relative", (isQuizActive || isParsonsActive) && "opacity-50 transition-opacity")}>
                             <PlayerControls
                                 isPlaying={algorithm.isPlaying}
                                 onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
-                                onNext={() => algorithm.setCurrentStepIndex(Math.min(algorithm.steps.length - 1, algorithm.currentStepIndex + 1))}
-                                onPrev={() => algorithm.setCurrentStepIndex(Math.max(0, algorithm.currentStepIndex - 1))}
-                                onStart={() => algorithm.setCurrentStepIndex(0)}
-                                onEnd={() => algorithm.setCurrentStepIndex(algorithm.steps.length - 1)}
+                                onNext={() => {
+                                    algorithm.setIsPlaying(false);
+                                    algorithm.setCurrentStepIndex(Math.min(algorithm.steps.length - 1, algorithm.currentStepIndex + 1));
+                                }}
+                                onPrev={() => {
+                                    algorithm.setIsPlaying(false);
+                                    algorithm.setCurrentStepIndex(Math.max(0, algorithm.currentStepIndex - 1));
+                                }}
+                                onStart={() => {
+                                    algorithm.setIsPlaying(false);
+                                    algorithm.setCurrentStepIndex(0);
+                                }}
+                                onEnd={() => {
+                                    algorithm.setIsPlaying(false);
+                                    algorithm.setCurrentStepIndex(algorithm.steps.length - 1);
+                                }}
                                 onReset={algorithm.resetAnimation}
                                 currentStep={algorithm.currentStepIndex}
-                                setCurrentStep={algorithm.setCurrentStepIndex}
+                                setCurrentStep={(step) => {
+                                    algorithm.setIsPlaying(false);
+                                    algorithm.setCurrentStepIndex(step);
+                                }}
                                 totalSteps={algorithm.steps.length}
                                 speed={algorithm.playbackSpeed}
                                 setSpeed={algorithm.setPlaybackSpeed}
@@ -303,7 +317,6 @@ export default function RedBlackTreeVisualiser() {
                 );
                 break;
             case 'pseudocode':
-                // REPLACED: If Parsons is active, show ParsonsPanel instead of PseudocodePanel
                 if (isParsonsActive && algorithm.currentStepData.parsonsData) {
                     content = (
                         <div className="h-[384px] w-full">

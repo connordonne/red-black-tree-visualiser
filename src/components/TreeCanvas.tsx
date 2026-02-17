@@ -22,7 +22,7 @@ interface TreeCanvasProps {
     onResetContainerSize?: () => void;
     showIsomorphic?: boolean;
     canvasLabel?: CanvasLabel; 
-    searchFocus?: SearchFocus; // Added Prop for comparison tracking
+    searchFocus?: SearchFocus; 
 }
 
 const NODE_RADIUS = 22;
@@ -71,38 +71,29 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     const { nodes, links } = useTreeLayout(root, showNils);
 
-    // Calculate position for the comparison "ghost" node
     const searchNodePos = useMemo(() => {
         if (!searchFocus) return null;
         
-        // Find the visual root node to determine global direction (Left vs Right subtree)
         const rootNode = nodes.find(n => n.parent === null);
         const rootKey = rootNode ? rootNode.data.key : null;
 
-        // If we are comparing against a specific node in the tree
         if (searchFocus.targetNodeKey !== null) {
             const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
             if (target) {
                 
-                // 1. Check for Match/Duplicate first
                 if (searchFocus.key === target.data.key) {
-                    // Snap directly on top of the node
                     return { x: target.x, y: target.y };
                 }
 
-                // 2. Determine offset based on relation to ROOT key
-                // This keeps the ghost node consistently on the left or right side 
-                // of the path depending on which subtree it is traversing.
                 let xOffset = 0;
                 
                 if (rootKey !== null) {
                     if (searchFocus.key < rootKey) {
-                        xOffset = -65; // Left side traversal
+                        xOffset = -65; 
                     } else {
-                        xOffset = 65; // Right side traversal (or equal to root, handled above)
+                        xOffset = 65; 
                     }
                 } else {
-                    // Fallback comparison if something is odd
                     const diff = searchFocus.key - target.data.key;
                     xOffset = diff < 0 ? -65 : 65;
                 }
@@ -114,16 +105,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
             }
         } 
         
-        // Fallback: If comparing against root/nil or tree is empty
         if (nodes.length > 0 && nodes[0].parent === null) {
              return { x: nodes[0].x, y: nodes[0].y - 60 };
         }
 
-        // Tree is truly empty, position in center of initial view
         return { x: 0, y: -50 }; 
     }, [searchFocus, nodes]);
 
-    // Calculate position for the label
     const labelTarget = useMemo(() => {
         if (!canvasLabel) return null;
         return nodes.find(n => n.data.key === canvasLabel.targetNodeKey);
@@ -535,29 +523,23 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     {(() => {
                                         if (searchFocus.targetNodeKey !== null) {
                                             const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
-                                            // Don't draw line if it's the duplicate/overlap case (offset 0)
                                             if (target && searchFocus.key !== target.data.key) {
-                                                // Calculate start point on the edge of the ghost node
-                                                const ghostRadius = NODE_RADIUS - 2; // Radius of the ghost circle defined below
-                                                const targetRadius = NODE_RADIUS; // Radius of the target tree node
+                                                const ghostRadius = NODE_RADIUS - 2; 
+                                                const targetRadius = NODE_RADIUS; 
                                                 
                                                 const dx = target.x - searchNodePos.x;
                                                 const dy = target.y - searchNodePos.y;
                                                 const distance = Math.sqrt(dx * dx + dy * dy);
                                                 
-                                                // Calculate new start coordinates shifted by radius towards target
                                                 let newX1 = searchNodePos.x;
                                                 let newY1 = searchNodePos.y;
                                                 let newX2 = target.x;
                                                 let newY2 = target.y;
                                                 
-                                                // Ensure distance > 0 to avoid division by zero
                                                 if (distance > 0) {
-                                                     // Move start point to edge of ghost node
                                                      newX1 += (dx / distance) * ghostRadius;
                                                      newY1 += (dy / distance) * ghostRadius;
 
-                                                     // Move end point to edge of target node
                                                      newX2 -= (dx / distance) * targetRadius;
                                                      newY2 -= (dy / distance) * targetRadius;
                                                 }
@@ -619,7 +601,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
                                         <motion.text 
                                             textAnchor="middle" 
-                                            y={-NODE_RADIUS - 10} // Fixed gap above node
+                                            y={-NODE_RADIUS - 10} 
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             className="text-[10px] fill-primary font-bold uppercase tracking-widest pointer-events-none"
@@ -640,7 +622,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     transition={{ duration: 0.3 }}
-                                    // UPDATED: Increased vertical offset to -85 to fully clear the node and highlight circle
                                     transform={`translate(${labelTarget.x}, ${labelTarget.y - 85})`}
                                     className="pointer-events-none"
                                 >
