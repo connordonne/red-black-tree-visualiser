@@ -25,13 +25,13 @@ export class TreeNode {
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical';
 
+// UPDATED: Added violations array
 export interface TreeHealth {
     status: HealthStatus;
     score: number;
     message: string;
+    violations: number[]; 
 }
-
-// ... [Existing Health Analysis Functions: calculateBlackHeightStats, hasRedRedConflict, analyzeTreeHealth] ... 
 
 function calculateBlackHeightStats(node: TreeNode | null): { min: number, max: number, valid: boolean } {
     let min = Infinity;
@@ -65,23 +65,46 @@ function hasRedRedConflict(node: TreeNode | null): boolean {
     return hasRedRedConflict(node.left) || hasRedRedConflict(node.right);
 }
 
+// UPDATED: Logic to populate the violations array
 export const analyzeTreeHealth = (root: TreeNode | null): TreeHealth => {
-    if (!root) return { status: 'healthy', score: 100, message: "System Stable" };
+    const violations: number[] = [];
 
-    if (root.color === Color.RED) {
-        return { status: 'critical', score: 45, message: "Critical: Root is RED (Prop 2)" };
+    // Property 2: Root must be Black
+    if (root && root.color === Color.RED) {
+        violations.push(2);
     }
 
+    // Property 4: No Red-Red relationships
+    if (hasRedRedConflict(root)) {
+        violations.push(4);
+    }
+
+    // Property 5: Black Height Consistency
     const bh = calculateBlackHeightStats(root);
     if (!bh.valid) {
-        return { status: 'critical', score: 30, message: "Critical: Black-Height Violation (Prop 5)" };
+        violations.push(5);
     }
 
-    if (hasRedRedConflict(root)) {
-        return { status: 'warning', score: 70, message: "Warning: Red-Red Infection (Prop 4)" };
+    let status: HealthStatus = 'healthy';
+    let score = 100;
+    let message = "System Stable";
+
+    if (violations.length > 0) {
+        score = Math.max(0, 100 - (violations.length * 25));
+        
+        if (violations.includes(5)) {
+             status = 'critical';
+             message = "Critical: Black-Height Violation";
+        } else if (violations.includes(4)) {
+             status = 'warning';
+             message = "Warning: Red-Red Conflict";
+        } else if (violations.includes(2)) {
+             status = 'warning';
+             message = "Warning: Root is Red";
+        }
     }
 
-    return { status: 'healthy', score: 100, message: "System Stable" };
+    return { status, score, message, violations };
 };
 
 // --- Quiz Interface ---
@@ -127,7 +150,7 @@ export interface Step {
     questionData?: QuizData;
     parsonsData?: ParsonsData;
     canvasLabel?: CanvasLabel;
-    searchFocus?: SearchFocus; // Added search focus
+    searchFocus?: SearchFocus;
 }
 
 // --- Predefined Content (Quizzes/Parsons) ---
@@ -222,7 +245,7 @@ export class RedBlackTree {
         questionData?: QuizData,
         parsonsData?: ParsonsData,
         canvasLabel?: CanvasLabel,
-        searchFocus?: SearchFocus // Added
+        searchFocus?: SearchFocus
     ) {
         steps.push({
             treeState: this.cloneNode(this.root, null),
@@ -296,7 +319,6 @@ export class RedBlackTree {
 
     insert(key: number): Step[] {
         const steps: Step[] = [];
-        // Add initial comparison step targeting the root if it exists, or just starting state
         this.addStep(
             steps, 
             `Starting insert of ${key}`, 
@@ -315,7 +337,6 @@ export class RedBlackTree {
         let x: TreeNode | null = this.root;
         while (x !== null) {
             y = x;
-            
             this.addStep(
                 steps, 
                 `Comparing ${key} with ${x.key}`, 
@@ -326,7 +347,7 @@ export class RedBlackTree {
                 undefined,
                 undefined,
                 undefined,
-                { key, targetNodeKey: x.key } // Visualize the comparison
+                { key, targetNodeKey: x.key }
             );
 
             if (z.key < x.key) {
@@ -369,7 +390,6 @@ export class RedBlackTree {
             if (z.parent === grandparent.left) {
                 const uncle = grandparent.right;
                 if (uncle?.color === Color.RED) {
-                    // CASE 1: Red Uncle
                     this.addStep(
                         steps, 
                         "Case 1: Red Parent, Red Uncle.", 
@@ -388,9 +408,7 @@ export class RedBlackTree {
                     z = grandparent;
                     this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [25]);
                 } else {
-                    // Uncle is Black
                     if (z === z.parent.right) {
-                        // CASE 2: Triangle (Left-Right)
                         this.addStep(
                             steps, 
                             "Case 2: Triangle Shape (Left-Right).", 
@@ -407,7 +425,6 @@ export class RedBlackTree {
                         this.leftRotate(z, steps, [28]);
                     }
                     
-                    // CASE 3: Line (Left-Left)
                     this.addStep(
                         steps, 
                         "Case 3: Line Shape (Left-Left).", 
@@ -426,10 +443,8 @@ export class RedBlackTree {
                     this.rightRotate(grandparent, steps, [31]);
                 }
             } else {
-                // Symmetric Case
                 const uncle = grandparent.left;
                 if (uncle?.color === Color.RED) {
-                    // CASE 1: Red Uncle
                     this.addStep(
                         steps, 
                         "Case 1: Red Parent, Red Uncle.", 
@@ -449,7 +464,6 @@ export class RedBlackTree {
                     this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [38]);
                 } else {
                     if (z === z.parent.left) {
-                         // CASE 2: Triangle (Right-Left)
                          this.addStep(
                             steps, 
                             "Case 2: Triangle Shape (Right-Left).", 
@@ -466,7 +480,6 @@ export class RedBlackTree {
                         this.rightRotate(z, steps, [41]);
                     }
 
-                    // CASE 3: Line (Right-Right)
                     this.addStep(
                         steps, 
                         "Case 3: Line Shape (Right-Right).", 
@@ -697,20 +710,23 @@ export class RedBlackTree {
             if (key === x.key) {
                 this.addStep(steps, `Found key ${key}!`, [x.key], [6], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
                 return steps;
-            } else if (key < x.key) {
+            } 
+            
+            const parentKey = x.key;
+
+            if (key < x.key) {
                 x = x.left;
                 if (x) {
-                    this.addStep(steps, `${key} < ${x.parent!.key}. Go Left.`, [x.key], [4], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
+                    this.addStep(steps, `${key} < ${parentKey}. Go Left.`, [x.key], [4], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
                 } else {
-                    // Moving to NIL
-                    this.addStep(steps, `${key} < ${x.parent!.key}. Left child is NIL.`, [], [4], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: null });
+                    this.addStep(steps, `${key} < ${parentKey}. Left child is NIL.`, [], [4], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: null });
                 }
             } else {
                 x = x.right;
                 if (x) {
-                     this.addStep(steps, `${key} > ${x.parent!.key}. Go Right.`, [x.key], [5], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
+                     this.addStep(steps, `${key} > ${parentKey}. Go Right.`, [x.key], [5], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
                 } else {
-                    this.addStep(steps, `${key} > ${x.parent!.key}. Right child is NIL.`, [], [5], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: null });
+                    this.addStep(steps, `${key} > ${parentKey}. Right child is NIL.`, [], [5], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: null });
                 }
             }
         }

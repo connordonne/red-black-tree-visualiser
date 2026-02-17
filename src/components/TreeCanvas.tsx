@@ -7,7 +7,7 @@ import { TreeNode, Color } from '@/core/RedBlackTree';
 import type { CanvasLabel, SearchFocus } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal, Info } from "lucide-react"; // Added Info icon
 import { cn } from '@/lib/utils';
 
 interface TreeCanvasProps {
@@ -22,7 +22,8 @@ interface TreeCanvasProps {
     onResetContainerSize?: () => void;
     showIsomorphic?: boolean;
     canvasLabel?: CanvasLabel; 
-    searchFocus?: SearchFocus; 
+    searchFocus?: SearchFocus;
+    explanation?: string; // NEW PROP
 }
 
 const NODE_RADIUS = 22;
@@ -39,7 +40,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    onResetContainerSize,
                                                    showIsomorphic = false,
                                                    canvasLabel,
-                                                   searchFocus
+                                                   searchFocus,
+                                                   explanation // Destructure new prop
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -71,6 +73,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     const { nodes, links } = useTreeLayout(root, showNils);
 
+    // Calculate position for the comparison "ghost" node
     const searchNodePos = useMemo(() => {
         if (!searchFocus) return null;
         
@@ -112,10 +115,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         return { x: 0, y: -50 }; 
     }, [searchFocus, nodes]);
 
-    const labelTarget = useMemo(() => {
-        if (!canvasLabel) return null;
-        return nodes.find(n => n.data.key === canvasLabel.targetNodeKey);
-    }, [canvasLabel, nodes]);
+    // Label calculation removed as requested
 
     const isomorphicGroups = useMemo(() => {
         if (!showIsomorphic) return [];
@@ -345,6 +345,29 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 )}
             </div>
 
+            {/* NEW: Internal Explanation Overlay */}
+            <AnimatePresence mode="wait">
+                {explanation && (
+                    <motion.div
+                        key={explanation}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 max-w-[90%] md:max-w-2xl z-20 pointer-events-none"
+                    >
+                        <div className="bg-background/80 backdrop-blur-md border border-border/50 shadow-xl rounded-xl p-4 flex items-start gap-3">
+                            <div className="mt-0.5 p-1 bg-primary/10 rounded-full shrink-0 text-primary">
+                                <Info className="size-4" />
+                            </div>
+                            <p className="text-sm font-medium leading-snug text-foreground">
+                                {explanation}
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {root ? (
                 <svg 
                     ref={svgRef} 
@@ -523,23 +546,29 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     {(() => {
                                         if (searchFocus.targetNodeKey !== null) {
                                             const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
+                                            // Don't draw line if it's the duplicate/overlap case (offset 0)
                                             if (target && searchFocus.key !== target.data.key) {
-                                                const ghostRadius = NODE_RADIUS - 2; 
-                                                const targetRadius = NODE_RADIUS; 
+                                                // Calculate start point on the edge of the ghost node
+                                                const ghostRadius = NODE_RADIUS - 2; // Radius of the ghost circle defined below
+                                                const targetRadius = NODE_RADIUS; // Radius of the target tree node
                                                 
                                                 const dx = target.x - searchNodePos.x;
                                                 const dy = target.y - searchNodePos.y;
                                                 const distance = Math.sqrt(dx * dx + dy * dy);
                                                 
+                                                // Calculate new start coordinates shifted by radius towards target
                                                 let newX1 = searchNodePos.x;
                                                 let newY1 = searchNodePos.y;
                                                 let newX2 = target.x;
                                                 let newY2 = target.y;
                                                 
+                                                // Ensure distance > 0 to avoid division by zero
                                                 if (distance > 0) {
+                                                     // Move start point to edge of ghost node
                                                      newX1 += (dx / distance) * ghostRadius;
                                                      newY1 += (dy / distance) * ghostRadius;
 
+                                                     // Move end point to edge of target node
                                                      newX2 -= (dx / distance) * targetRadius;
                                                      newY2 -= (dy / distance) * targetRadius;
                                                 }
@@ -601,7 +630,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
                                         <motion.text 
                                             textAnchor="middle" 
-                                            y={-NODE_RADIUS - 10} 
+                                            y={-NODE_RADIUS - 10} // Fixed gap above node
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             className="text-[10px] fill-primary font-bold uppercase tracking-widest pointer-events-none"
@@ -613,31 +642,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                             )}
                         </AnimatePresence>
 
-                        {/* Floating Canvas Labels */}
-                        <AnimatePresence>
-                            {labelTarget && canvasLabel && (
-                                <motion.g
-                                    key={`label-${canvasLabel.targetNodeKey}-${canvasLabel.text}`}
-                                    initial={{ opacity: 0, y: -5, scale: 0.9 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ duration: 0.3 }}
-                                    transform={`translate(${labelTarget.x}, ${labelTarget.y - 85})`}
-                                    className="pointer-events-none"
-                                >
-                                    <foreignObject x="-60" y="-15" width="120" height="40" overflow="visible">
-                                        <div className={cn(
-                                            "flex items-center justify-center px-3 py-1.5 rounded-full shadow-lg border text-xs font-bold whitespace-nowrap w-fit mx-auto",
-                                            canvasLabel.type === 'warning' ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/80 dark:text-amber-100" :
-                                            canvasLabel.type === 'rotation' ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/80 dark:text-blue-100" :
-                                            "bg-background text-foreground border-border"
-                                        )}>
-                                            {canvasLabel.text}
-                                        </div>
-                                    </foreignObject>
-                                </motion.g>
-                            )}
-                        </AnimatePresence>
+                        {/* Floating Canvas Labels REMOVED */}
 
                     </g>
                 </svg>

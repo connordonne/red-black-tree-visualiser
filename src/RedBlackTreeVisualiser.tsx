@@ -200,7 +200,8 @@ export default function RedBlackTreeVisualiser() {
                                 onResetContainerSize={resetTreeSize}
                                 showIsomorphic={visualSettings.showIsomorphic} 
                                 canvasLabel={algorithm.currentStepData.canvasLabel}
-                                searchFocus={algorithm.currentStepData.searchFocus} // Pass the new prop
+                                searchFocus={algorithm.currentStepData.searchFocus} 
+                                explanation={algorithm.currentStepData.description}
                             />
                         </div>
                         {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
@@ -251,7 +252,7 @@ export default function RedBlackTreeVisualiser() {
                 break;
             case 'explanation':
                 content = (
-                    <div className="h-[120px] w-full">
+                    <div className="h-full w-full">
                         <ExplanationBox
                             description={algorithm.currentStepData.description}
                             currentStep={algorithm.currentStepIndex + 1}
