@@ -4,7 +4,7 @@ import React, { useRef, useState, useLayoutEffect, useEffect, useCallback, useMe
 import { motion, AnimatePresence } from 'framer-motion';
 import * as d3 from 'd3'; 
 import { TreeNode, Color } from '@/core/RedBlackTree';
-import type { CanvasLabel } from '@/core/RedBlackTree';
+import type { CanvasLabel, SearchFocus } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal } from "lucide-react";
@@ -22,6 +22,7 @@ interface TreeCanvasProps {
     onResetContainerSize?: () => void;
     showIsomorphic?: boolean;
     canvasLabel?: CanvasLabel; 
+    searchFocus?: SearchFocus; // Added Prop for comparison tracking
 }
 
 const NODE_RADIUS = 22;
@@ -37,7 +38,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    onHoverAddress,
                                                    onResetContainerSize,
                                                    showIsomorphic = false,
-                                                   canvasLabel
+                                                   canvasLabel,
+                                                   searchFocus
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -69,6 +71,58 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     const { nodes, links } = useTreeLayout(root, showNils);
 
+    // Calculate position for the comparison "ghost" node
+    const searchNodePos = useMemo(() => {
+        if (!searchFocus) return null;
+        
+        // Find the visual root node to determine global direction (Left vs Right subtree)
+        const rootNode = nodes.find(n => n.parent === null);
+        const rootKey = rootNode ? rootNode.data.key : null;
+
+        // If we are comparing against a specific node in the tree
+        if (searchFocus.targetNodeKey !== null) {
+            const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
+            if (target) {
+                
+                // 1. Check for Match/Duplicate first
+                if (searchFocus.key === target.data.key) {
+                    // Snap directly on top of the node
+                    return { x: target.x, y: target.y };
+                }
+
+                // 2. Determine offset based on relation to ROOT key
+                // This keeps the ghost node consistently on the left or right side 
+                // of the path depending on which subtree it is traversing.
+                let xOffset = 0;
+                
+                if (rootKey !== null) {
+                    if (searchFocus.key < rootKey) {
+                        xOffset = -65; // Left side traversal
+                    } else {
+                        xOffset = 65; // Right side traversal (or equal to root, handled above)
+                    }
+                } else {
+                    // Fallback comparison if something is odd
+                    const diff = searchFocus.key - target.data.key;
+                    xOffset = diff < 0 ? -65 : 65;
+                }
+
+                return { 
+                    x: target.x + xOffset, 
+                    y: target.y 
+                };
+            }
+        } 
+        
+        // Fallback: If comparing against root/nil or tree is empty
+        if (nodes.length > 0 && nodes[0].parent === null) {
+             return { x: nodes[0].x, y: nodes[0].y - 60 };
+        }
+
+        // Tree is truly empty, position in center of initial view
+        return { x: 0, y: -50 }; 
+    }, [searchFocus, nodes]);
+
     // Calculate position for the label
     const labelTarget = useMemo(() => {
         if (!canvasLabel) return null;
@@ -80,9 +134,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         const groups: RBTHierarchyPointNode[][] = [];
 
         nodes.forEach(node => {
-            // Exclude NIL nodes (dummies) from forming groups
             if (node.data.isDummy) return;
-            
+
             if (node.data.color === Color.BLACK) {
                 const currentGroup = [node];
                 
@@ -313,6 +366,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                     <rect width="100%" height="100%" fill="transparent" />
                     
                     <g ref={gRef}>
+                        {/* Isomorphic Group Backgrounds */}
                         <AnimatePresence>
                             {isomorphicGroups.map((group) => {
                                 const rect = getGroupRect(group);
@@ -343,6 +397,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                             })}
                         </AnimatePresence>
 
+                        {/* Node Links */}
                         <AnimatePresence>
                             {links.map((link) => (
                                 <motion.path
@@ -363,6 +418,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                             ))}
                         </AnimatePresence>
 
+                        {/* Nodes */}
                         <AnimatePresence>
                             {nodes.map((node) => {
                                 const isDummy = node.data.isDummy;
@@ -469,6 +525,110 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     </motion.g>
                                 );
                             })}
+                        </AnimatePresence>
+
+                        {/* SEARCH/INSERT COMPARISON GHOST NODE */}
+                        <AnimatePresence>
+                            {searchFocus && searchNodePos && (
+                                <React.Fragment key="search-visuals">
+                                     {/* Render line if we have a target and it's not a direct overlap */}
+                                    {(() => {
+                                        if (searchFocus.targetNodeKey !== null) {
+                                            const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
+                                            // Don't draw line if it's the duplicate/overlap case (offset 0)
+                                            if (target && searchFocus.key !== target.data.key) {
+                                                // Calculate start point on the edge of the ghost node
+                                                const ghostRadius = NODE_RADIUS - 2; // Radius of the ghost circle defined below
+                                                const targetRadius = NODE_RADIUS; // Radius of the target tree node
+                                                
+                                                const dx = target.x - searchNodePos.x;
+                                                const dy = target.y - searchNodePos.y;
+                                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                                
+                                                // Calculate new start coordinates shifted by radius towards target
+                                                let newX1 = searchNodePos.x;
+                                                let newY1 = searchNodePos.y;
+                                                let newX2 = target.x;
+                                                let newY2 = target.y;
+                                                
+                                                // Ensure distance > 0 to avoid division by zero
+                                                if (distance > 0) {
+                                                     // Move start point to edge of ghost node
+                                                     newX1 += (dx / distance) * ghostRadius;
+                                                     newY1 += (dy / distance) * ghostRadius;
+
+                                                     // Move end point to edge of target node
+                                                     newX2 -= (dx / distance) * targetRadius;
+                                                     newY2 -= (dy / distance) * targetRadius;
+                                                }
+
+                                                return (
+                                                    <motion.line
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        x1={newX1}
+                                                        y1={newY1}
+                                                        x2={newX2}
+                                                        y2={newY2}
+                                                        stroke="var(--primary)"
+                                                        strokeWidth={2}
+                                                        strokeDasharray="4 4"
+                                                        strokeOpacity={0.5}
+                                                    />
+                                                );
+                                            }
+                                        }
+                                        return null;
+                                    })()}
+
+                                    <motion.g
+                                        key="search-ghost-node"
+                                        initial={{ opacity: 0, scale: 0 }}
+                                        animate={{ opacity: 1, scale: 1, x: searchNodePos.x, y: searchNodePos.y }}
+                                        exit={{ opacity: 0, scale: 0 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                    >
+                                        <circle 
+                                            r={NODE_RADIUS - 2} 
+                                            fill="var(--background)" 
+                                            stroke="var(--primary)" 
+                                            strokeWidth={2} 
+                                            strokeDasharray="3 3"
+                                        />
+                                        <text 
+                                            textAnchor="middle" 
+                                            dy=".3em" 
+                                            className="font-bold text-xs font-mono fill-foreground"
+                                        >
+                                            {searchFocus.key}
+                                        </text>
+                                        
+                                        {/* Text Background Pill for readability over links */}
+                                        <motion.rect
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            x={-30}
+                                            y={-NODE_RADIUS - 20}
+                                            width={60}
+                                            height={14}
+                                            rx={7}
+                                            fill="var(--background)"
+                                            className="stroke-none"
+                                        />
+
+                                        <motion.text 
+                                            textAnchor="middle" 
+                                            y={-NODE_RADIUS - 10} // Fixed gap above node
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="text-[10px] fill-primary font-bold uppercase tracking-widest pointer-events-none"
+                                        >
+                                            Compare
+                                        </motion.text>
+                                    </motion.g>
+                                </React.Fragment>
+                            )}
                         </AnimatePresence>
 
                         {/* Floating Canvas Labels */}

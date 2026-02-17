@@ -111,6 +111,12 @@ export interface CanvasLabel {
     type?: 'info' | 'warning' | 'success' | 'rotation';
 }
 
+// --- Search Focus Interface ---
+export interface SearchFocus {
+    key: number; 
+    targetNodeKey: number | null; 
+}
+
 export interface Step {
     treeState: TreeNode | null;
     description: string;
@@ -120,7 +126,8 @@ export interface Step {
     requiresInteraction?: boolean;
     questionData?: QuizData;
     parsonsData?: ParsonsData;
-    canvasLabel?: CanvasLabel; // Added Label Support
+    canvasLabel?: CanvasLabel;
+    searchFocus?: SearchFocus; // Added search focus
 }
 
 // --- Predefined Content (Quizzes/Parsons) ---
@@ -214,7 +221,8 @@ export class RedBlackTree {
         requiresInteraction: boolean = false,
         questionData?: QuizData,
         parsonsData?: ParsonsData,
-        canvasLabel?: CanvasLabel // New Optional Parameter
+        canvasLabel?: CanvasLabel,
+        searchFocus?: SearchFocus // Added
     ) {
         steps.push({
             treeState: this.cloneNode(this.root, null),
@@ -225,7 +233,8 @@ export class RedBlackTree {
             requiresInteraction,
             questionData,
             parsonsData,
-            canvasLabel
+            canvasLabel,
+            searchFocus
         });
     }
 
@@ -233,7 +242,6 @@ export class RedBlackTree {
         const y = x.right;
         if (!y) return;
         
-        // Parsons Scaffolding Point with Visual Label
         this.addStep(
             steps, 
             `Preparing Left Rotation around ${x.key}. Arrange the logic pointers.`, 
@@ -262,7 +270,6 @@ export class RedBlackTree {
         const x = y.left;
         if (!x) return;
 
-        // Parsons Scaffolding Point with Visual Label
         this.addStep(
             steps, 
             `Preparing Right Rotation around ${y.key}. Arrange the logic pointers.`, 
@@ -289,19 +296,45 @@ export class RedBlackTree {
 
     insert(key: number): Step[] {
         const steps: Step[] = [];
-        this.addStep(steps, `Starting insert of ${key}`, [], [1, 2]);
+        // Add initial comparison step targeting the root if it exists, or just starting state
+        this.addStep(
+            steps, 
+            `Starting insert of ${key}`, 
+            [], 
+            [1, 2], 
+            'insert', 
+            false, 
+            undefined, 
+            undefined, 
+            undefined,
+            { key, targetNodeKey: this.root ? this.root.key : null }
+        );
+
         const z = new TreeNode(key);
         let y: TreeNode | null = null;
         let x: TreeNode | null = this.root;
         while (x !== null) {
             y = x;
-            this.addStep(steps, `Comparing ${key} with ${x.key}`, [x.key], [3, 4, 5]);
+            
+            this.addStep(
+                steps, 
+                `Comparing ${key} with ${x.key}`, 
+                [x.key], 
+                [3, 4, 5],
+                'insert',
+                false,
+                undefined,
+                undefined,
+                undefined,
+                { key, targetNodeKey: x.key } // Visualize the comparison
+            );
+
             if (z.key < x.key) {
                 x = x.left;
-                this.addStep(steps, `${key} < ${y.key}, go Left`, [y.key], [6]);
+                this.addStep(steps, `${key} < ${y.key}, go Left`, [y.key], [6], 'insert', false, undefined, undefined, undefined, { key, targetNodeKey: y.key }); 
             } else if (z.key > x.key) {
                 x = x.right;
-                this.addStep(steps, `${key} > ${y.key}, go Right`, [y.key], [7]);
+                this.addStep(steps, `${key} > ${y.key}, go Right`, [y.key], [7], 'insert', false, undefined, undefined, undefined, { key, targetNodeKey: y.key });
             } else {
                 this.addStep(steps, `Key ${key} already exists.`, [x.key], []);
                 return steps;
@@ -344,8 +377,8 @@ export class RedBlackTree {
                         [21, 22, 23, 24], 
                         undefined, 
                         true, 
-                        QUIZZES.case1,
-                        undefined,
+                        QUIZZES.case1, 
+                        undefined, 
                         { text: "Uncle is RED", targetNodeKey: uncle.key, type: 'warning' }
                     );
                     
@@ -404,8 +437,8 @@ export class RedBlackTree {
                         [34, 35, 36, 37], 
                         undefined, 
                         true, 
-                        QUIZZES.case1,
-                        undefined,
+                        QUIZZES.case1, 
+                        undefined, 
                         { text: "Uncle is RED", targetNodeKey: uncle.key, type: 'warning' }
                     );
 
@@ -633,23 +666,55 @@ export class RedBlackTree {
 
     search(key: number): Step[] {
         const steps: Step[] = [];
-        this.addStep(steps, `Starting search for ${key}.`, this.root ? [this.root.key] : [], [1]);
+        this.addStep(
+            steps, 
+            `Starting search for ${key}.`, 
+            this.root ? [this.root.key] : [], 
+            [1],
+            'find',
+            false,
+            undefined,
+            undefined,
+            undefined,
+            { key, targetNodeKey: this.root ? this.root.key : null }
+        );
+
         let x = this.root;
         while (x !== null) {
-            this.addStep(steps, `Checking node ${x.key}.`, [x.key], [2]);
-            this.addStep(steps, `Comparing ${key} with ${x.key}.`, [x.key], [3]);
+            this.addStep(
+                steps, 
+                `Comparing ${key} with ${x.key}.`, 
+                [x.key], 
+                [2, 3],
+                'find',
+                false,
+                undefined,
+                undefined,
+                undefined,
+                { key, targetNodeKey: x.key }
+            );
+
             if (key === x.key) {
-                this.addStep(steps, `Found key ${key}!`, [x.key], [6]);
+                this.addStep(steps, `Found key ${key}!`, [x.key], [6], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
                 return steps;
             } else if (key < x.key) {
-                this.addStep(steps, `${key} < ${x.key}. Go Left.`, [x.key], [4]);
                 x = x.left;
+                if (x) {
+                    this.addStep(steps, `${key} < ${x.parent!.key}. Go Left.`, [x.key], [4], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
+                } else {
+                    // Moving to NIL
+                    this.addStep(steps, `${key} < ${x.parent!.key}. Left child is NIL.`, [], [4], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: null });
+                }
             } else {
-                this.addStep(steps, `${key} > ${x.key}. Go Right.`, [x.key], [5]);
                 x = x.right;
+                if (x) {
+                     this.addStep(steps, `${key} > ${x.parent!.key}. Go Right.`, [x.key], [5], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: x.key });
+                } else {
+                    this.addStep(steps, `${key} > ${x.parent!.key}. Right child is NIL.`, [], [5], 'find', false, undefined, undefined, undefined, { key, targetNodeKey: null });
+                }
             }
         }
-        this.addStep(steps, `Key ${key} not found (reached NIL).`, [], [2, 6]);
+        this.addStep(steps, `Key ${key} not found.`, [], [2, 6]);
         return steps;
     }
 

@@ -200,6 +200,7 @@ export default function RedBlackTreeVisualiser() {
                                 onResetContainerSize={resetTreeSize}
                                 showIsomorphic={visualSettings.showIsomorphic} 
                                 canvasLabel={algorithm.currentStepData.canvasLabel}
+                                searchFocus={algorithm.currentStepData.searchFocus}
                             />
                         </div>
                         {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
