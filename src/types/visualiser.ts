@@ -15,4 +15,5 @@ export interface VisualSettings {
     showAddresses: boolean;
     showNils: boolean;
     showIsomorphic: boolean; 
+    tutorialMode: boolean;
 }
