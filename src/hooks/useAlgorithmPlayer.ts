@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { RedBlackTree, type Step } from "@/core/RedBlackTree";
 
 const INITIAL_STEP: Step = {
@@ -9,13 +9,13 @@ const INITIAL_STEP: Step = {
     operationType: undefined
 };
 
-export function useAlgorithmPlayer() {
+export function useAlgorithmPlayer(tutorialMode: boolean = true) {
     const [steps, setSteps] = useState<Step[]>([INITIAL_STEP]);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(1000);
+    const lastStoppedIndex = useRef<number>(-1);
 
-    // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
@@ -42,9 +42,14 @@ export function useAlgorithmPlayer() {
 
     useEffect(() => {
         let timer: number;
+        const shouldPauseForInteraction = 
+            tutorialMode && 
+            steps[currentStepIndex]?.requiresInteraction && 
+            lastStoppedIndex.current !== currentStepIndex;
 
-        if (isPlaying && steps[currentStepIndex]?.requiresInteraction) {
+        if (isPlaying && shouldPauseForInteraction) {
             setIsPlaying(false);
+            lastStoppedIndex.current = currentStepIndex; 
             return;
         }
 
@@ -54,7 +59,11 @@ export function useAlgorithmPlayer() {
             setIsPlaying(false);
         }
         return () => clearTimeout(timer);
-    }, [isPlaying, currentStepIndex, steps, playbackSpeed]);
+    }, [isPlaying, currentStepIndex, steps, playbackSpeed, tutorialMode]);
+
+    useEffect(() => {
+        lastStoppedIndex.current = -1;
+    }, [steps]);
 
     const runOperation = useCallback((
         operationFn: (tree: RedBlackTree) => Step[], 
@@ -74,17 +83,20 @@ export function useAlgorithmPlayer() {
         setSteps(prev => [...prev, ...stepsWithMeta]);
         setCurrentStepIndex(steps.length); 
         setIsPlaying(true);
+        lastStoppedIndex.current = -1; 
     }, [steps]);
 
     const reset = useCallback(() => {
         setSteps([INITIAL_STEP]);
         setCurrentStepIndex(0);
         setIsPlaying(false);
+        lastStoppedIndex.current = -1;
     }, []);
 
     const resetAnimation = useCallback(() => {
         setCurrentStepIndex(0);
         setIsPlaying(false);
+        lastStoppedIndex.current = -1;
     }, []);
 
     return {
