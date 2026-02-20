@@ -39,7 +39,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    onHoverAddress,
                                                    onResetContainerSize,
                                                    showIsomorphic = false,
-                                                   canvasLabel,
                                                    searchFocus,
                                                    explanation // Destructure new prop
                                                }) => {
