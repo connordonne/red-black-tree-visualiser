@@ -24,6 +24,9 @@ interface TreeCanvasProps {
     canvasLabel?: CanvasLabel; 
     searchFocus?: SearchFocus;
     explanation?: string; // NEW PROP
+    userColors?: Record<number, number>; // NEW
+    onNodeClick?: (key: number) => void; // NEW
+    isRecolorActive?: boolean; // NEW
 }
 
 const NODE_RADIUS = 22;
@@ -40,7 +43,10 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    onResetContainerSize,
                                                    showIsomorphic = false,
                                                    searchFocus,
-                                                   explanation // Destructure new prop
+                                                   explanation, // Destructure new prop
+                                                   userColors, // Destructured
+                                                   onNodeClick, // Destructured
+                                                   isRecolorActive // Destructured
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -434,7 +440,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                 const isDummy = node.data.isDummy;
                                 const isHighlighted = highlightedKeys.includes(node.data.key);
                                 const isHovered = hoveredAddress === node.data.address;
-                                const isRed = node.data.color === Color.RED;
+                                
+                                // NEW: Determine the active color by overlaying user input over canonical state
+                                const actualColor = userColors && userColors[node.data.key] !== undefined 
+                                    ? userColors[node.data.key] 
+                                    : node.data.color;
+                                const isRed = actualColor === Color.RED;
+                                
                                 const opacity = getOpacity(node.data.address);
 
                                 if (isDummy) {
@@ -487,10 +499,16 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                         initial={{ opacity: 0, scale: 0.5 }}
                                         animate={{ opacity: opacity, scale: 1, x: node.x, y: node.y }}
                                         exit={{ opacity: 0, scale: 0.5 }}
+                                        whileHover={isRecolorActive ? { scale: 1.15 } : undefined}
                                         transition={transition}
                                         onMouseEnter={() => onHoverAddress?.(node.data.address)}
                                         onMouseLeave={() => onHoverAddress?.(null)}
-                                        className="cursor-pointer"
+                                        onClick={() => {
+                                            if (isRecolorActive && onNodeClick) {
+                                                onNodeClick(node.data.key);
+                                            }
+                                        }}
+                                        className={cn("cursor-pointer", isRecolorActive ? "hover:z-50" : "")}
                                     >
                                         {isHighlighted && (
                                             <motion.circle

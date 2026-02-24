@@ -17,12 +17,11 @@ import { MemoryGrid } from "@/components/MemoryGrid";
 import { NodeInspector } from "@/components/NodeInspector";
 import { ViewOptions } from "@/components/ViewOptions";
 import { SortableItem } from "@/components/SortableItem";
-import { QuizOverlay } from "@/components/QuizOverlay";
 
 // Hooks & Types
 import { useAlgorithmPlayer } from "@/hooks/useAlgorithmPlayer";
 import { useDashboardLayout } from "@/hooks/useDashboardLayout";
-import { analyzeTreeHealth } from "@/core/RedBlackTree";
+import { TreeNode, Color, analyzeTreeHealth } from "@/core/RedBlackTree";
 import type { WidgetId, ViewState, VisualSettings } from "@/types/visualiser";
 import { cn } from "@/lib/utils";
 import { ANNOTATIONS } from "@/lib/pseudocode";
@@ -49,14 +48,17 @@ export default function RedBlackTreeVisualiser() {
     const [activeTab, setActiveTab] = useState("insert");
     
     // --- Interaction State ---
-    const [quizSolved, setQuizSolved] = useState(false);
     const [parsonsSolved, setParsonsSolved] = useState(false);
+    
+    // NEW: Interactive Recolor States
+    const [userColors, setUserColors] = useState<Record<number, number>>({});
+    const [recolorError, setRecolorError] = useState<string | null>(null);
     
     // Reset interaction states when changing steps
     useEffect(() => {
-        // When step changes, check if new step requires interaction. If not, reset solved flags.
-        setQuizSolved(false);
         setParsonsSolved(false);
+        setUserColors({});
+        setRecolorError(null);
     }, [algorithm.currentStepIndex]);
 
     const [viewState, setViewState] = useState<ViewState>({
@@ -139,7 +141,7 @@ export default function RedBlackTreeVisualiser() {
     };
 
     // --- Computed Data ---
-    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';     
+    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';      
     const activeLines = (algorithm.currentStepData.operationType === pseudocodeMode) 
         ? algorithm.currentStepData.pseudocodeLines 
         : [];
@@ -149,17 +151,6 @@ export default function RedBlackTreeVisualiser() {
         const key = `show${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof ViewState;
         return viewState[key];
     });
-
-    // Quiz Check (Modified for Tutorial Mode)
-    const isQuizActive = visualSettings.tutorialMode &&
-                         algorithm.currentStepData.requiresInteraction && 
-                         algorithm.currentStepData.questionData && 
-                         !quizSolved;
-
-    const handleQuizComplete = () => {
-        setQuizSolved(true);
-        algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
-    };
 
     // Parsons Check (Modified for Tutorial Mode)
     const isParsonsActive = visualSettings.tutorialMode &&
@@ -171,6 +162,81 @@ export default function RedBlackTreeVisualiser() {
         setParsonsSolved(true);
         algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
     };
+
+    // NEW: Computed logic for recolor state
+    const isRecolorActive = !!(
+        visualSettings.tutorialMode &&
+        algorithm.currentStepData.requiresInteraction &&
+        algorithm.currentStepData.recolorData
+    );
+
+    const findNodeByKey = useCallback((node: TreeNode | null, key: number): TreeNode | null => {
+        if (!node) return null;
+        if (node.key === key) return node;
+        return findNodeByKey(node.left, key) || findNodeByKey(node.right, key);
+    }, []);
+
+    const handleNodeClick = useCallback((key: number) => {
+        if (!isRecolorActive) return;
+        setUserColors(prev => {
+            let currentColor = prev[key];
+            if (currentColor === undefined) {
+                const node = findNodeByKey(algorithm.currentStepData.treeState, key);
+                if (node) {
+                    currentColor = node.color;
+                } else {
+                    return prev;
+                }
+            }
+            // Toggle Red (0) <-> Black (1)
+            return { ...prev, [key]: currentColor === Color.RED ? Color.BLACK : Color.RED };
+        });
+        setRecolorError(null);
+    }, [isRecolorActive, algorithm.currentStepData.treeState, findNodeByKey]);
+
+    const handleRecolorSubmit = useCallback(() => {
+        const expected = algorithm.currentStepData.recolorData?.expected;
+        if (!expected) return;
+
+        let isCorrect = true;
+        let specificError = "";
+
+        // 1. Check all nodes identified in the expected dataset
+        for (const [keyStr, expectedColor] of Object.entries(expected)) {
+            const key = parseInt(keyStr);
+            const node = findNodeByKey(algorithm.currentStepData.treeState, key);
+            const currentColor = userColors[key] !== undefined ? userColors[key] : node?.color;
+            if (currentColor !== expectedColor) {
+                isCorrect = false;
+                const colorName = expectedColor === Color.RED ? "RED" : "BLACK";
+                specificError = `Node ${key} should be ${colorName}.`;
+                break;
+            }
+        }
+
+        // 2. Validate that the user didn't modify irrelevant/collateral nodes
+        if (isCorrect) {
+            for (const [keyStr, color] of Object.entries(userColors)) {
+                const key = parseInt(keyStr);
+                if (expected[key] === undefined) {
+                    const node = findNodeByKey(algorithm.currentStepData.treeState, key);
+                    if (node && color !== node.color) {
+                        isCorrect = false;
+                        const originalColorName = node.color === Color.RED ? "RED" : "BLACK";
+                        specificError = `Node ${key} should not be changed (leave it ${originalColorName}).`;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (isCorrect) {
+            algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
+        } else {
+            const baseHint = algorithm.currentStepData.recolorData?.hint || "Please try again.";
+            setRecolorError(`${specificError}\n${baseHint}`);
+        }
+    }, [algorithm, userColors, findNodeByKey]);
 
     // --- Health Analysis ---
     const treeHealth = useMemo(() => {
@@ -202,6 +268,9 @@ export default function RedBlackTreeVisualiser() {
                                 canvasLabel={algorithm.currentStepData.canvasLabel}
                                 searchFocus={algorithm.currentStepData.searchFocus} 
                                 explanation={algorithm.currentStepData.description}
+                                userColors={userColors}
+                                onNodeClick={handleNodeClick}
+                                isRecolorActive={isRecolorActive}
                             />
                         </div>
                         {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
@@ -212,13 +281,6 @@ export default function RedBlackTreeVisualiser() {
                                     <p className="text-xs text-muted-foreground/70 mt-1">Focus on the code panel to proceed.</p>
                                 </div>
                             </div>
-                        )}
-                        {/* Quiz Overlay Positioned Over TreeCanvas */}
-                        {isQuizActive && algorithm.currentStepData.questionData && (
-                            <QuizOverlay 
-                                data={algorithm.currentStepData.questionData} 
-                                onComplete={handleQuizComplete} 
-                            />
                         )}
                         <div onMouseDown={handleResizeMouseDown} className="absolute bottom-0 right-0 p-2 cursor-ns-resize z-40 opacity-30 group-hover:opacity-100 transition-opacity">
                             <svg width="16" height="16" viewBox="0 0 12 12" fill="none" className="text-muted-foreground"><path d="M10 2L2 10M10 6L6 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -259,6 +321,9 @@ export default function RedBlackTreeVisualiser() {
                             totalSteps={algorithm.steps.length}
                             health={treeHealth}
                             className="h-full"
+                            recolorData={isRecolorActive ? algorithm.currentStepData.recolorData : undefined}
+                            onRecolorSubmit={handleRecolorSubmit}
+                            recolorError={recolorError}
                         />
                     </div>
                 );
@@ -266,7 +331,7 @@ export default function RedBlackTreeVisualiser() {
             case 'player':
                 content = (
                     <div className="h-[85px] w-full">
-                        <div className={cn("h-full relative", (isQuizActive || isParsonsActive) && "opacity-50 transition-opacity")}>
+                        <div className={cn("h-full relative", (isParsonsActive || isRecolorActive) && "opacity-50 pointer-events-none transition-opacity")}>
                             <PlayerControls
                                 isPlaying={algorithm.isPlaying}
                                 onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
