@@ -67,21 +67,11 @@ function hasRedRedConflict(node: TreeNode | null): boolean {
 export const analyzeTreeHealth = (root: TreeNode | null): TreeHealth => {
     const violations: number[] = [];
 
-    // Property 2: Root must be Black
-    if (root && root.color === Color.RED) {
-        violations.push(2);
-    }
-
-    // Property 4: No Red-Red relationships
-    if (hasRedRedConflict(root)) {
-        violations.push(4);
-    }
-
-    // Property 5: Black Height Consistency
+    if (root && root.color === Color.RED) violations.push(2);
+    if (hasRedRedConflict(root)) violations.push(4);
+    
     const bh = calculateBlackHeightStats(root);
-    if (!bh.valid) {
-        violations.push(5);
-    }
+    if (!bh.valid) violations.push(5);
 
     let status: HealthStatus = 'healthy';
     let score = 100;
@@ -105,13 +95,6 @@ export const analyzeTreeHealth = (root: TreeNode | null): TreeHealth => {
     return { status, score, message, violations };
 };
 
-// --- Parsons Interface ---
-export interface ParsonsData {
-    lines: { id: string, text: string }[];
-    solutionIds: string[];
-    title: string;
-}
-
 // --- Visual Canvas Label Interface ---
 export interface CanvasLabel {
     text: string;
@@ -132,6 +115,12 @@ export interface RecolorData {
     hint?: string;
 }
 
+// --- NEW: Drag Puzzle Interface ---
+export interface DragPuzzleData {
+    targetTree: TreeNode;
+    nodesToMove: number[];
+}
+
 export interface Step {
     treeState: TreeNode | null;
     description: string;
@@ -139,36 +128,11 @@ export interface Step {
     pseudocodeLines: number[];
     operationType?: 'insert' | 'delete' | 'find';
     requiresInteraction?: boolean;
-    parsonsData?: ParsonsData;
+    dragPuzzleData?: DragPuzzleData; // Replaced ParsonsData
     canvasLabel?: CanvasLabel;
     searchFocus?: SearchFocus;
     recolorData?: RecolorData;
 }
-
-const PARSONS_PROBLEMS = {
-    leftRotate: {
-        title: "Build Left-Rotate Logic",
-        lines: [
-            { id: 'p1', text: "y = x.right" },
-            { id: 'p2', text: "x.right = y.left" },
-            { id: 'p3', text: "y.parent = x.parent" },
-            { id: 'p4', text: "y.left = x" },
-            { id: 'p5', text: "x.parent = y" }
-        ],
-        solutionIds: ['p1', 'p2', 'p3', 'p4', 'p5']
-    } as ParsonsData,
-    rightRotate: {
-        title: "Build Right-Rotate Logic",
-        lines: [
-            { id: 'p1', text: "x = y.left" },
-            { id: 'p2', text: "y.left = x.right" },
-            { id: 'p3', text: "x.parent = y.parent" },
-            { id: 'p4', text: "x.right = y" },
-            { id: 'p5', text: "y.parent = x" }
-        ],
-        solutionIds: ['p1', 'p2', 'p3', 'p4', 'p5']
-    } as ParsonsData
-};
 
 export class RedBlackTree {
     root: TreeNode | null;
@@ -198,6 +162,19 @@ export class RedBlackTree {
         return calculateBlackHeightStats(this.root);
     }
 
+    private getSubtreeKeys(node: TreeNode | null): number[] {
+        if (!node) return [];
+        const keys: number[] = [];
+        const stack = [node];
+        while (stack.length > 0) {
+            const curr = stack.pop()!;
+            keys.push(curr.key);
+            if (curr.right) stack.push(curr.right);
+            if (curr.left) stack.push(curr.left);
+        }
+        return keys;
+    }
+
     private addStep(
         steps: Step[], 
         description: string, 
@@ -205,7 +182,7 @@ export class RedBlackTree {
         pseudocodeLines: number[] = [],
         operationType?: 'insert' | 'delete' | 'find',
         requiresInteraction: boolean = false,
-        parsonsData?: ParsonsData,
+        dragPuzzleData?: DragPuzzleData,
         canvasLabel?: CanvasLabel,
         searchFocus?: SearchFocus,
         recolorData?: RecolorData
@@ -217,7 +194,7 @@ export class RedBlackTree {
             pseudocodeLines,
             operationType,
             requiresInteraction,
-            parsonsData,
+            dragPuzzleData,
             canvasLabel,
             searchFocus,
             recolorData
@@ -228,17 +205,34 @@ export class RedBlackTree {
         const y = x.right;
         if (!y) return;
         
+        // 1. Simulate rotation on a clone to get target layout for the drag puzzle
+        const simulatedTree = this.clone();
+        const simX = simulatedTree.find(x.key)!;
+        const simY = simX.right!;
+        
+        simX.right = simY.left;
+        if (simY.left !== null) simY.left.parent = simX;
+        simY.parent = simX.parent;
+        if (simX.parent === null) simulatedTree.root = simY;
+        else if (simX === simX.parent.left) simX.parent.left = simY;
+        else simX.parent.right = simY;
+        simY.left = simX;
+        simX.parent = simY;
+        
+        // 2. Add drag puzzle step
+        const nodesToMove = this.getSubtreeKeys(x);
         this.addStep(
             steps, 
-            `Preparing Left Rotation around ${x.key}. Arrange the logic pointers.`, 
-            [x.key, y.key], 
+            `Preparing Left Rotation around ${x.key}. Drag the highlighted nodes into their new logical positions.`, 
+            nodesToMove, 
             lines, 
             undefined, 
             true, 
-            PARSONS_PROBLEMS.leftRotate,
+            { targetTree: simulatedTree.root!, nodesToMove },
             { text: "Rotate Left ↺", targetNodeKey: x.key, type: 'rotation' }
         );
 
+        // 3. Perform actual rotation on REAL tree
         x.right = y.left;
         if (y.left !== null) y.left.parent = x;
         y.parent = x.parent;
@@ -248,24 +242,41 @@ export class RedBlackTree {
         y.left = x;
         x.parent = y;
         
-        this.addStep(steps, `Left rotate around ${x.key} complete.`, [x.key, y.key], lines);
+        this.addStep(steps, `Left rotate around ${x.key} complete.`, nodesToMove, lines);
     }
 
     private rightRotate(y: TreeNode, steps: Step[], lines: number[] = []): void {
         const x = y.left;
         if (!x) return;
 
+        // 1. Simulate rotation
+        const simulatedTree = this.clone();
+        const simY = simulatedTree.find(y.key)!;
+        const simX = simY.left!;
+
+        simY.left = simX.right;
+        if (simX.right !== null) simX.right.parent = simY;
+        simX.parent = simY.parent;
+        if (simY.parent === null) simulatedTree.root = simX;
+        else if (simY === simY.parent.right) simY.parent.right = simX;
+        else simY.parent.left = simX;
+        simX.right = simY;
+        simY.parent = simX;
+
+        // 2. Add puzzle step
+        const nodesToMove = this.getSubtreeKeys(y);
         this.addStep(
             steps, 
-            `Preparing Right Rotation around ${y.key}. Arrange the logic pointers.`, 
-            [y.key, x.key], 
+            `Preparing Right Rotation around ${y.key}. Drag the highlighted nodes into their new logical positions.`, 
+            nodesToMove, 
             lines, 
             undefined, 
             true, 
-            PARSONS_PROBLEMS.rightRotate,
+            { targetTree: simulatedTree.root!, nodesToMove },
             { text: "Rotate Right ↻", targetNodeKey: y.key, type: 'rotation' }
         );
 
+        // 3. Perform actual rotation
         y.left = x.right;
         if (x.right !== null) x.right.parent = y;
         x.parent = y.parent;
@@ -275,39 +286,19 @@ export class RedBlackTree {
         x.right = y;
         y.parent = x;
         
-        this.addStep(steps, `Right rotate around ${y.key} complete.`, [y.key, x.key], lines);
+        this.addStep(steps, `Right rotate around ${y.key} complete.`, nodesToMove, lines);
     }
 
     insert(key: number): Step[] {
         const steps: Step[] = [];
-        this.addStep(
-            steps, 
-            `Starting insert of ${key}`, 
-            [], 
-            [1, 2], 
-            'insert', 
-            false, 
-            undefined, 
-            undefined, 
-            { key, targetNodeKey: this.root ? this.root.key : null }
-        );
+        this.addStep(steps, `Starting insert of ${key}`, [], [1, 2], 'insert', false, undefined, undefined, { key, targetNodeKey: this.root ? this.root.key : null });
 
         const z = new TreeNode(key);
         let y: TreeNode | null = null;
         let x: TreeNode | null = this.root;
         while (x !== null) {
             y = x;
-            this.addStep(
-                steps, 
-                `Comparing ${key} with ${x.key}`, 
-                [x.key], 
-                [3, 4, 5],
-                'insert',
-                false,
-                undefined,
-                undefined,
-                { key, targetNodeKey: x.key }
-            );
+            this.addStep(steps, `Comparing ${key} with ${x.key}`, [x.key], [3, 4, 5], 'insert', false, undefined, undefined, { key, targetNodeKey: x.key });
 
             if (z.key < x.key) {
                 x = x.left;
@@ -361,11 +352,7 @@ export class RedBlackTree {
                         undefined,
                         {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors.",
-                            expected: {
-                                [z.parent.key]: Color.BLACK,
-                                [uncle.key]: Color.BLACK,
-                                [grandparent.key]: Color.RED
-                            },
+                            expected: { [z.parent.key]: Color.BLACK, [uncle.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: Red Parent + Red Uncle means you must push Black down from the Grandparent."
                         }
                     );
@@ -377,17 +364,7 @@ export class RedBlackTree {
                     this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [25]);
                 } else {
                     if (z === z.parent.right) {
-                        this.addStep(
-                            steps, 
-                            "Case 2: Triangle Shape (Left-Right).", 
-                            highlightKeys, 
-                            [26, 27, 28],
-                            undefined,
-                            false,
-                            undefined,
-                            { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' }
-                        );
-                        
+                        this.addStep(steps, "Case 2: Triangle Shape (Left-Right).", highlightKeys, [26, 27, 28], undefined, false, undefined, { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' });
                         z = z.parent;
                         this.leftRotate(z, steps, [28]);
                     }
@@ -404,10 +381,7 @@ export class RedBlackTree {
                         undefined,
                         {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors before rotating.",
-                            expected: {
-                                [z.parent!.key]: Color.BLACK,
-                                [grandparent.key]: Color.RED
-                            },
+                            expected: { [z.parent!.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: For a Line shape, swap the colors of the Parent and Grandparent to restore Black-Height after rotation."
                         }
                     );
@@ -432,11 +406,7 @@ export class RedBlackTree {
                         undefined,
                         {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors.",
-                            expected: {
-                                [z.parent.key]: Color.BLACK,
-                                [uncle.key]: Color.BLACK,
-                                [grandparent.key]: Color.RED
-                            },
+                            expected: { [z.parent.key]: Color.BLACK, [uncle.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: Red Parent + Red Uncle means you must push Black down from the Grandparent."
                         }
                     );
@@ -448,17 +418,7 @@ export class RedBlackTree {
                     this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [38]);
                 } else {
                     if (z === z.parent.left) {
-                         this.addStep(
-                            steps, 
-                            "Case 2: Triangle Shape (Right-Left).", 
-                            highlightKeys, 
-                            [39, 40, 41],
-                            undefined,
-                            false,
-                            undefined,
-                            { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' }
-                        );
-
+                         this.addStep(steps, "Case 2: Triangle Shape (Right-Left).", highlightKeys, [39, 40, 41], undefined, false, undefined, { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' });
                         z = z.parent;
                         this.rightRotate(z, steps, [41]);
                     }
@@ -475,10 +435,7 @@ export class RedBlackTree {
                         undefined,
                         {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors before rotating.",
-                            expected: {
-                                [z.parent!.key]: Color.BLACK,
-                                [grandparent.key]: Color.RED
-                            },
+                            expected: { [z.parent!.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: For a Line shape, swap the colors of the Parent and Grandparent to restore Black-Height after rotation."
                         }
                     );
@@ -498,22 +455,14 @@ export class RedBlackTree {
     }
 
     private transplant(u: TreeNode, v: TreeNode | null): void {
-        if (u.parent === null) {
-            this.root = v;
-        } else if (u === u.parent.left) {
-            u.parent.left = v;
-        } else {
-            u.parent.right = v;
-        }
-        if (v !== null) {
-            v.parent = u.parent;
-        }
+        if (u.parent === null) this.root = v;
+        else if (u === u.parent.left) u.parent.left = v;
+        else u.parent.right = v;
+        if (v !== null) v.parent = u.parent;
     }
 
     private minimum(node: TreeNode): TreeNode {
-        while (node.left !== null) {
-            node = node.left;
-        }
+        while (node.left !== null) node = node.left;
         return node;
     }
 
@@ -586,10 +535,7 @@ export class RedBlackTree {
                 if (sibling.color === Color.RED) {
                     this.addStep(steps, "Sibling is RED (Case 1). Recolor and Rotate Left.", [...highlightBase, sibling.key], [24, 25, 26, 27], undefined, true, undefined, { text: "Sibling Red", targetNodeKey: sibling.key, type: 'warning'}, undefined, {
                         prompt: "Sibling is RED (Case 1). Fix the colors before rotating.",
-                        expected: {
-                            [sibling.key]: Color.BLACK,
-                            [parentOfCurrent.key]: Color.RED
-                        },
+                        expected: { [sibling.key]: Color.BLACK, [parentOfCurrent.key]: Color.RED },
                         hint: "Hint: To fix a Red sibling, swap the colors of the parent and the sibling to prepare for rotation."
                     });
                     sibling.color = Color.BLACK;
@@ -615,10 +561,7 @@ export class RedBlackTree {
                     if (isRightChildBlack) {
                         this.addStep(steps, "Sibling Right Child is BLACK (Case 3). Recolor and Rotate Right.", [...highlightBase, sibling.key], [32, 33, 34, 35], undefined, true, undefined, { text: "Close Nephew Red", targetNodeKey: sibling.left ? sibling.left.key : sibling.key, type: 'info' }, undefined, {
                             prompt: "Close nephew is RED (Case 3). Fix colors before rotation.",
-                            expected: {
-                                [sibling.key]: Color.RED,
-                                ...(sibling.left ? { [sibling.left.key]: Color.BLACK } : {})
-                            },
+                            expected: { [sibling.key]: Color.RED, ...(sibling.left ? { [sibling.left.key]: Color.BLACK } : {}) },
                             hint: "Hint: Swap the colors of the sibling and its close Red nephew to push the Red node outward."
                         });
                         if (sibling.left) sibling.left.color = Color.BLACK;
@@ -650,10 +593,7 @@ export class RedBlackTree {
                 if (sibling.color === Color.RED) {
                     this.addStep(steps, "Sibling is RED (Case 1 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [44, 45, 46, 47], undefined, true, undefined, { text: "Sibling Red", targetNodeKey: sibling.key, type: 'warning'}, undefined, {
                         prompt: "Sibling is RED (Case 1 Sym). Fix the colors before rotating.",
-                        expected: {
-                            [sibling.key]: Color.BLACK,
-                            [parentOfCurrent.key]: Color.RED
-                        },
+                        expected: { [sibling.key]: Color.BLACK, [parentOfCurrent.key]: Color.RED },
                         hint: "Hint: To fix a Red sibling, swap the colors of the parent and the sibling to prepare for rotation."
                     });
                     sibling.color = Color.BLACK;
@@ -677,10 +617,7 @@ export class RedBlackTree {
                     if (isLeftChildBlack) {
                         this.addStep(steps, "Sibling Left Child is BLACK (Case 3 Sym). Recolor and Rotate Left.", [...highlightBase, sibling.key], [52, 53, 54, 55], undefined, true, undefined, { text: "Close Nephew Red", targetNodeKey: sibling.right ? sibling.right.key : sibling.key, type: 'info' }, undefined, {
                             prompt: "Close nephew is RED (Case 3 Sym). Fix colors before rotation.",
-                            expected: {
-                                [sibling.key]: Color.RED,
-                                ...(sibling.right ? { [sibling.right.key]: Color.BLACK } : {})
-                            },
+                            expected: { [sibling.key]: Color.RED, ...(sibling.right ? { [sibling.right.key]: Color.BLACK } : {}) },
                             hint: "Hint: Swap the colors of the sibling and its close Red nephew to push the Red node outward."
                         });
                         if (sibling.right) sibling.right.color = Color.BLACK;

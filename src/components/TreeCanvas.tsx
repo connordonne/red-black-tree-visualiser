@@ -2,12 +2,12 @@
 
 import React, { useRef, useState, useLayoutEffect, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as d3 from 'd3'; 
+import * as d3 from 'd3';
 import { TreeNode, Color } from '@/core/RedBlackTree';
-import type { CanvasLabel, SearchFocus } from '@/core/RedBlackTree';
+import type { CanvasLabel, SearchFocus, DragPuzzleData } from '@/core/RedBlackTree';
 import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink } from '@/hooks/useTreeLayout';
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal, Info } from "lucide-react"; // Added Info icon
+import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal, Info, XCircle } from "lucide-react";
 import { cn } from '@/lib/utils';
 
 interface TreeCanvasProps {
@@ -21,12 +21,14 @@ interface TreeCanvasProps {
     onHoverAddress?: (addr: number | null) => void;
     onResetContainerSize?: () => void;
     showIsomorphic?: boolean;
-    canvasLabel?: CanvasLabel; 
+    canvasLabel?: CanvasLabel;
     searchFocus?: SearchFocus;
-    explanation?: string; // NEW PROP
-    userColors?: Record<number, number>; // NEW
-    onNodeClick?: (key: number) => void; // NEW
-    isRecolorActive?: boolean; // NEW
+    explanation?: string;
+    userColors?: Record<number, number>;
+    onNodeClick?: (key: number) => void;
+    isRecolorActive?: boolean;
+    dragPuzzleData?: DragPuzzleData;
+    onDragPuzzleComplete?: () => void;
 }
 
 const NODE_RADIUS = 22;
@@ -43,19 +45,35 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    onResetContainerSize,
                                                    showIsomorphic = false,
                                                    searchFocus,
-                                                   explanation, // Destructure new prop
-                                                   userColors, // Destructured
-                                                   onNodeClick, // Destructured
-                                                   isRecolorActive // Destructured
+                                                   explanation,
+                                                   userColors,
+                                                   onNodeClick,
+                                                   isRecolorActive,
+                                                   dragPuzzleData,
+                                                   onDragPuzzleComplete
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
     const gRef = useRef<SVGGElement>(null);
-    
-    const isViewCentered = useRef(false); 
+
+    const isViewCentered = useRef(false);
 
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const zoomBehavior = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+
+    // Track which nodes have been successfully dragged into their target spots
+    const [snappedKeys, setSnappedKeys] = useState<number[]>([]);
+
+    // Track invalid drops to force components to reset their position
+    const [resetKeys, setResetKeys] = useState<Record<number, number>>({});
+    const [dragError, setDragError] = useState<string | null>(null);
+
+    // Reset drag puzzle state on step change
+    useEffect(() => {
+        setSnappedKeys([]);
+        setResetKeys({});
+        setDragError(null);
+    }, [root]);
 
     useLayoutEffect(() => {
         const updateSize = () => {
@@ -78,49 +96,40 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     const { nodes, links } = useTreeLayout(root, showNils);
 
-    // Calculate position for the comparison "ghost" node
+    // Always compute the target layout if there's a drag puzzle active
+    const targetLayout = useTreeLayout(dragPuzzleData?.targetTree || null, showNils);
+    const isDragPuzzleActive = !!dragPuzzleData;
+
     const searchNodePos = useMemo(() => {
         if (!searchFocus) return null;
-        
+
         const rootNode = nodes.find(n => n.parent === null);
         const rootKey = rootNode ? rootNode.data.key : null;
 
         if (searchFocus.targetNodeKey !== null) {
             const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
             if (target) {
-                
-                if (searchFocus.key === target.data.key) {
-                    return { x: target.x, y: target.y };
-                }
+                if (searchFocus.key === target.data.key) return { x: target.x, y: target.y };
 
                 let xOffset = 0;
-                
                 if (rootKey !== null) {
-                    if (searchFocus.key < rootKey) {
-                        xOffset = -65; 
-                    } else {
-                        xOffset = 65; 
-                    }
+                    if (searchFocus.key < rootKey) xOffset = -65;
+                    else xOffset = 65;
                 } else {
                     const diff = searchFocus.key - target.data.key;
                     xOffset = diff < 0 ? -65 : 65;
                 }
 
-                return { 
-                    x: target.x + xOffset, 
-                    y: target.y 
-                };
+                return { x: target.x + xOffset, y: target.y };
             }
-        } 
-        
-        if (nodes.length > 0 && nodes[0].parent === null) {
-             return { x: nodes[0].x, y: nodes[0].y - 60 };
         }
 
-        return { x: 0, y: -50 }; 
-    }, [searchFocus, nodes]);
+        if (nodes.length > 0 && nodes[0].parent === null) {
+            return { x: nodes[0].x, y: nodes[0].y - 60 };
+        }
 
-    // Label calculation removed as requested
+        return { x: 0, y: -50 };
+    }, [searchFocus, nodes]);
 
     const isomorphicGroups = useMemo(() => {
         if (!showIsomorphic) return [];
@@ -131,7 +140,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
             if (node.data.color === Color.BLACK) {
                 const currentGroup = [node];
-                
                 if (node.children) {
                     node.children.forEach(child => {
                         const childNode = child as RBTHierarchyPointNode;
@@ -154,22 +162,21 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
             minY = Math.min(minY, n.y);
             maxY = Math.max(maxY, n.y);
         });
-        const padding = 28; 
+        const padding = 28;
         return {
             x: minX - padding,
             y: minY - padding,
             width: (maxX - minX) + (padding * 2),
             height: (maxY - minY) + (padding * 2),
-            rx: 20 
+            rx: 20
         };
     };
 
     const activePath = useMemo(() => {
         if (hoveredAddress === null) return new Set<number>();
-        
         const pathSet = new Set<number>();
         const targetNode = nodes.find(n => n.data.address === hoveredAddress);
-        
+
         if (targetNode) {
             let current: RBTHierarchyPointNode | null = targetNode;
             while (current) {
@@ -180,30 +187,46 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         return pathSet;
     }, [hoveredAddress, nodes]);
 
-    const getOpacity = (nodeAddress: number) => {
+    const getOpacity = (nodeAddress: number, nodeKey: number) => {
+        if (isDragPuzzleActive) {
+            return dragPuzzleData.nodesToMove.includes(nodeKey) ? 1 : 0.2;
+        }
         if (hoveredAddress === null) return 1;
         return activePath.has(nodeAddress) ? 1 : 0.15;
     };
-    
+
     const getLinkOpacity = (link: RBTHierarchyPointLink) => {
-        if (hoveredAddress === null) return link.target.data.isDummy ? 0.3 : 1; 
-        
+        if (isDragPuzzleActive) return 0.05; // Heavily dim links during the drag puzzle
+        if (hoveredAddress === null) return link.target.data.isDummy ? 0.3 : 1;
+
         const targetInPath = activePath.has(link.target.data.address);
         return targetInPath ? 1 : 0.1;
     }
 
+    const getNodeRenderPos = useCallback((node: RBTHierarchyPointNode) => {
+        let x = node.x;
+        let y = node.y;
+        if (isDragPuzzleActive && dragPuzzleData && snappedKeys.includes(node.data.key)) {
+            const tNode = targetLayout.nodes.find(n => n.data.key === node.data.key);
+            if (tNode) {
+                x = tNode.x;
+                y = tNode.y;
+            }
+        }
+        return { x, y };
+    }, [isDragPuzzleActive, dragPuzzleData, snappedKeys, targetLayout]);
+
     const getTreeBounds = useCallback((nodes: RBTHierarchyPointNode[], padding = 40) => {
         if (nodes.length === 0) return null;
-        
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        
+
         nodes.forEach(d => {
             if (d.x < minX) minX = d.x;
             if (d.x > maxX) maxX = d.x;
             if (d.y < minY) minY = d.y;
             if (d.y > maxY) maxY = d.y;
         });
-        
+
         return {
             x: minX - NODE_RADIUS - padding,
             y: minY - NODE_RADIUS - padding,
@@ -216,25 +239,22 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     const zoomToFit = useCallback(() => {
         if (!containerRef.current || !svgRef.current || !zoomBehavior.current || nodes.length === 0) return;
-        
+
         const bounds = getTreeBounds(nodes);
         if (!bounds) return;
 
         const { width, height } = containerRef.current.getBoundingClientRect();
         if (width === 0 || height === 0) return;
-        
+
         const scaleX = width / bounds.width;
         const scaleY = height / bounds.height;
         let targetScale = Math.min(scaleX, scaleY);
-        
-        targetScale = Math.min(targetScale, 1.2); 
+        targetScale = Math.min(targetScale, 1.2);
 
         const targetX = (width / 2) - (bounds.centerX * targetScale);
-        const targetY = (height / 2) - (bounds.centerY * targetScale); 
+        const targetY = (height / 2) - (bounds.centerY * targetScale);
 
-        const newTransform = d3.zoomIdentity
-            .translate(targetX, targetY)
-            .scale(targetScale);
+        const newTransform = d3.zoomIdentity.translate(targetX, targetY).scale(targetScale);
 
         d3.select(svgRef.current)
             .transition()
@@ -246,7 +266,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
     useEffect(() => {
         if (!root || !svgRef.current || nodes.length === 0 || dimensions.width === 0) return;
-
         if (!zoomBehavior.current) return;
 
         const bounds = getTreeBounds(nodes);
@@ -256,31 +275,35 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         if (svg.empty()) return;
 
         const currentTransform = d3.zoomTransform(svg.node()!);
-
         const screenLeft = currentTransform.applyX(bounds.x);
         const screenRight = currentTransform.applyX(bounds.x + bounds.width);
         const screenTop = currentTransform.applyY(bounds.y);
         const screenBottom = currentTransform.applyY(bounds.y + bounds.height);
 
-        const isOutOfBounds = 
-            screenLeft < 0 || 
-            screenRight > dimensions.width || 
-            screenTop < 0 || 
+        const isOutOfBounds =
+            screenLeft < 0 ||
+            screenRight > dimensions.width ||
+            screenTop < 0 ||
             screenBottom > dimensions.height;
 
-        if (!isViewCentered.current || isOutOfBounds) {
-             zoomToFit();
-        }
-
-    }, [nodes, dimensions, root, getTreeBounds, zoomToFit]); 
+        if (!isViewCentered.current || isOutOfBounds) zoomToFit();
+    }, [nodes, dimensions, root, getTreeBounds, zoomToFit]);
 
     useEffect(() => {
         if (!root || !svgRef.current || !gRef.current) return;
-
         const svg = d3.select(svgRef.current);
-
         zoomBehavior.current = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
+            .filter((event: unknown) => {
+                const e = event as MouseEvent;
+                const target = e.target as Element | null;
+
+                // Ignore D3 zoom/pan if the target is an active draggable node
+                if (target?.closest('.draggable-node')) return false;
+
+                // Default D3 filter behaviour
+                return (!e.ctrlKey || e.type === 'wheel') && !e.button;
+            })
             .on("zoom", (event) => {
                 if (gRef.current) {
                     d3.select(gRef.current).attr("transform", event.transform);
@@ -288,17 +311,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
             });
 
         svg.call(zoomBehavior.current);
-
-        if (!isViewCentered.current) {
-            setTimeout(() => zoomToFit(), 0);
-        }
-
-    }, [root, zoomToFit]); 
+        if (!isViewCentered.current) setTimeout(() => zoomToFit(), 0);
+    }, [root, zoomToFit]);
 
     useEffect(() => {
-        if (!root) {
-            isViewCentered.current = false;
-        }
+        if (!root) isViewCentered.current = false;
     }, [root]);
 
     const handleZoomIn = () => {
@@ -314,12 +331,29 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
     const nodeKey = (d: RBTHierarchyPointNode) => `node-${d.data.key}-${d.data.address}-${d.data.isDummy ? 'dummy' : 'real'}`;
     const linkKey = (d: RBTHierarchyPointLink) => `link-${d.source.data.key}-${d.target.data.key}-${d.target.data.address}`;
 
-    const transition: any = { type: 'spring', stiffness: 300, damping: 30 };
+    const transition = { type: 'spring', stiffness: 300, damping: 30 } as const;
     const toHex = (n: number) => `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
 
-    
     return (
         <div ref={containerRef} className="h-full w-full relative overflow-hidden bg-dot-pattern group">
+
+            {/* Error display for invalid drop */}
+            <AnimatePresence>
+                {dragError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        className="absolute top-[80px] left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+                    >
+                        <div className="bg-destructive text-destructive-foreground px-4 py-2 rounded-full shadow-lg border border-destructive-foreground/20 text-sm font-bold flex items-center gap-2">
+                            <XCircle className="size-4" />
+                            {dragError}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={handleZoomIn} title="Zoom In">
                     <ZoomIn className="size-4" />
@@ -330,13 +364,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm bg-background/80 backdrop-blur" onClick={zoomToFit} title="Fit to View">
                     <Maximize className="size-4" />
                 </Button>
-                
+
                 {toggleNils && (
-                    <Button 
-                        variant={showNils ? "default" : "secondary"} 
-                        size="icon" 
+                    <Button
+                        variant={showNils ? "default" : "secondary"}
+                        size="icon"
                         className={cn("h-8 w-8 shadow-sm backdrop-blur transition-colors", !showNils && "bg-background/80")}
-                        onClick={toggleNils} 
+                        onClick={toggleNils}
                         title={showNils ? "Hide NIL Nodes" : "Show NIL Nodes (Black Height)"}
                     >
                         <GitCommitHorizontal className="size-4" />
@@ -350,7 +384,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                 )}
             </div>
 
-            {/* NEW: Internal Explanation Overlay */}
             <AnimatePresence mode="wait">
                 {explanation && (
                     <motion.div
@@ -374,29 +407,29 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
             </AnimatePresence>
 
             {root ? (
-                <svg 
-                    ref={svgRef} 
-                    className="w-full h-full cursor-grab active:cursor-grabbing block touch-none"
+                <svg
+                    ref={svgRef}
+                    className={cn("w-full h-full block touch-none", isDragPuzzleActive ? "" : "cursor-grab active:cursor-grabbing")}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <rect width="100%" height="100%" fill="transparent" />
-                    
+
                     <g ref={gRef}>
                         {/* Isomorphic Group Backgrounds */}
                         <AnimatePresence>
                             {isomorphicGroups.map((group) => {
                                 const rect = getGroupRect(group);
-                                const key = `group-${group[0].data.key}-${group[0].data.address}`; 
+                                const key = `group-${group[0].data.key}-${group[0].data.address}`;
                                 return (
                                     <motion.rect
                                         key={key}
                                         initial={{ opacity: 0 }}
-                                        animate={{ 
-                                            opacity: 1, 
-                                            x: rect.x, 
-                                            y: rect.y, 
-                                            width: rect.width, 
-                                            height: rect.height 
+                                        animate={{
+                                            opacity: 1,
+                                            x: rect.x,
+                                            y: rect.y,
+                                            width: rect.width,
+                                            height: rect.height
                                         }}
                                         exit={{ opacity: 0 }}
                                         transition={transition}
@@ -415,23 +448,27 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
                         {/* Node Links */}
                         <AnimatePresence>
-                            {links.map((link) => (
-                                <motion.path
-                                    key={linkKey(link)}
-                                    initial={{ opacity: 0, pathLength: 0 }}
-                                    animate={{
-                                        opacity: getLinkOpacity(link),
-                                        pathLength: 1,
-                                        d: `M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`
-                                    }}
-                                    exit={{ opacity: 0 }}
-                                    transition={transition}
-                                    stroke="var(--foreground)"
-                                    strokeWidth={link.target.data.isDummy ? 1 : 2}
-                                    strokeDasharray={link.target.data.isDummy ? "4 4" : "none"}
-                                    fill="none"
-                                />
-                            ))}
+                            {links.map((link) => {
+                                const sourcePos = getNodeRenderPos(link.source);
+                                const targetPos = getNodeRenderPos(link.target);
+                                return (
+                                    <motion.path
+                                        key={linkKey(link)}
+                                        initial={{ opacity: 0, pathLength: 0 }}
+                                        animate={{
+                                            opacity: getLinkOpacity(link),
+                                            pathLength: 1,
+                                            d: `M${sourcePos.x},${sourcePos.y} L${targetPos.x},${targetPos.y}`
+                                        }}
+                                        exit={{ opacity: 0 }}
+                                        transition={transition}
+                                        stroke="var(--foreground)"
+                                        strokeWidth={link.target.data.isDummy ? 1 : 2}
+                                        strokeDasharray={link.target.data.isDummy ? "4 4" : "none"}
+                                        fill="none"
+                                    />
+                                );
+                            })}
                         </AnimatePresence>
 
                         {/* Nodes */}
@@ -440,21 +477,26 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                 const isDummy = node.data.isDummy;
                                 const isHighlighted = highlightedKeys.includes(node.data.key);
                                 const isHovered = hoveredAddress === node.data.address;
-                                
-                                // NEW: Determine the active color by overlaying user input over canonical state
-                                const actualColor = userColors && userColors[node.data.key] !== undefined 
-                                    ? userColors[node.data.key] 
+
+                                const actualColor = userColors && userColors[node.data.key] !== undefined
+                                    ? userColors[node.data.key]
                                     : node.data.color;
                                 const isRed = actualColor === Color.RED;
-                                
-                                const opacity = getOpacity(node.data.address);
+
+                                const opacity = getOpacity(node.data.address, node.data.key);
+
+                                // Interaction Logic for Drag Puzzle
+                                const isMovable = isDragPuzzleActive && dragPuzzleData?.nodesToMove.includes(node.data.key);
+                                const hasSnapped = snappedKeys.includes(node.data.key);
+
+                                const { x: renderX, y: renderY } = getNodeRenderPos(node);
 
                                 if (isDummy) {
                                     return (
                                         <motion.g
                                             key={nodeKey(node)}
                                             initial={{ opacity: 0, scale: 0.5 }}
-                                            animate={{ opacity: opacity, scale: 1, x: node.x, y: node.y }}
+                                            animate={{ opacity: opacity, scale: 1, x: renderX, y: renderY }}
                                             exit={{ opacity: 0, scale: 0.5 }}
                                             transition={transition}
                                             className="cursor-help"
@@ -493,14 +535,92 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                     );
                                 }
 
+                                const nodeResetKey = resetKeys[node.data.key] || 0;
+                                const finalNodeKey = `${nodeKey(node)}-reset-${nodeResetKey}`;
+
                                 return (
                                     <motion.g
-                                        key={nodeKey(node)}
+                                        key={finalNodeKey}
                                         initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: opacity, scale: 1, x: node.x, y: node.y }}
+                                        animate={{ opacity: opacity, scale: 1, x: renderX, y: renderY }}
                                         exit={{ opacity: 0, scale: 0.5 }}
-                                        whileHover={isRecolorActive ? { scale: 1.15 } : undefined}
+                                        whileHover={
+                                            isRecolorActive ? { scale: 1.15 } :
+                                                (isMovable && !hasSnapped) ? { scale: 1.1 } :
+                                                    undefined
+                                        }
                                         transition={transition}
+                                        drag={isMovable && !hasSnapped}
+                                        dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
+                                        dragElastic={1}
+
+                                        onDragEnd={(_e, info) => {
+                                            if (!isDragPuzzleActive || !dragPuzzleData || !zoomBehavior.current || !svgRef.current) return;
+
+                                            // Extract current D3 zoom scale to calculate SVG offset distance
+                                            const zoomTransform = d3.zoomTransform(svgRef.current);
+                                            const zoomScale = zoomTransform.k || 1;
+
+                                            const dropX = renderX + info.offset.x / zoomScale;
+                                            const dropY = renderY + info.offset.y / zoomScale;
+
+                                            // 1. ALWAYS check for overlaps first (before checking if it's correct)
+                                            const isOverlapping = nodes.some(n => {
+                                                if (n.data.key === node.data.key) return false;
+                                                if (n.data.isDummy && !showNils) return false; // Ignore hidden nils
+
+                                                // Get where this node 'n' is currently sitting visually
+                                                const { x: nx, y: ny } = getNodeRenderPos(n);
+                                                const dist = Math.hypot(nx - dropX, ny - dropY);
+                                                return dist < NODE_RADIUS * 2; // Nodes are too close to each other
+                                            });
+
+                                            if (isOverlapping) {
+                                                setDragError(`Cannot drop node on top of another node!`);
+                                                setTimeout(() => setDragError(null), 2500);
+
+                                                // Force the node to fully jump back to origin by updating its key
+                                                setResetKeys(prev => ({
+                                                    ...prev,
+                                                    [node.data.key]: (prev[node.data.key] || 0) + 1
+                                                }));
+                                                return; // Stop processing, reject the drop
+                                            }
+
+                                            // 2. Check target position
+                                            const tNode = targetLayout.nodes.find(n => n.data.key === node.data.key);
+                                            let isCorrect = false;
+
+                                            if (tNode) {
+                                                const dist = Math.hypot(tNode.x - dropX, tNode.y - dropY);
+                                                if (dist < NODE_RADIUS * 2.5) { // Generous snap tolerance
+                                                    isCorrect = true;
+                                                }
+                                            }
+
+                                            if (isCorrect && tNode) {
+                                                setDragError(null);
+                                                if (!snappedKeys.includes(node.data.key)) {
+                                                    const newSnapped = [...snappedKeys, node.data.key];
+                                                    setSnappedKeys(newSnapped);
+
+                                                    if (newSnapped.length === dragPuzzleData.nodesToMove.length) {
+                                                        setTimeout(() => onDragPuzzleComplete?.(), 500);
+                                                    }
+                                                }
+                                            } else {
+                                                setDragError("Incorrect position!");
+
+                                                // Clear error visually after delay
+                                                setTimeout(() => setDragError(null), 2500);
+
+                                                // Force the node to fully jump back to origin by updating its key
+                                                setResetKeys(prev => ({
+                                                    ...prev,
+                                                    [node.data.key]: (prev[node.data.key] || 0) + 1
+                                                }));
+                                            }
+                                        }}
                                         onMouseEnter={() => onHoverAddress?.(node.data.address)}
                                         onMouseLeave={() => onHoverAddress?.(null)}
                                         onClick={() => {
@@ -508,9 +628,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 onNodeClick(node.data.key);
                                             }
                                         }}
-                                        className={cn("cursor-pointer", isRecolorActive ? "hover:z-50" : "")}
+                                        className={cn(
+                                            "transition-colors",
+                                            isRecolorActive ? "cursor-pointer hover:z-50" : "",
+                                            (isMovable && !hasSnapped) ? "draggable-node cursor-grab active:cursor-grabbing z-50 hover:z-50" : ""
+                                        )}
                                     >
-                                        {isHighlighted && (
+                                        {isHighlighted && !isDragPuzzleActive && (
                                             <motion.circle
                                                 r={NODE_RADIUS + 6}
                                                 initial={{ scale: 0 }}
@@ -521,7 +645,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 strokeWidth={3}
                                             />
                                         )}
-                                    
+
                                         {isHovered && (
                                             <motion.circle
                                                 r={NODE_RADIUS + 4}
@@ -531,7 +655,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 strokeDasharray="4 4"
                                             />
                                         )}
-                                    
+
                                         <circle
                                             r={NODE_RADIUS}
                                             className="drop-shadow-sm transition-all duration-300"
@@ -540,7 +664,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                             strokeWidth={2}
                                             strokeDasharray={colorBlindMode && isRed ? "4 3" : "none"}
                                         />
-                                    
+
                                         <text
                                             textAnchor="middle"
                                             dy=".3em"
@@ -557,37 +681,33 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
                         {/* SEARCH/INSERT COMPARISON GHOST NODE */}
                         <AnimatePresence>
-                            {searchFocus && searchNodePos && (
+                            {searchFocus && searchNodePos && !isDragPuzzleActive && (
                                 <React.Fragment key="search-visuals">
-                                     {/* Render line if we have a target and it's not a direct overlap */}
+                                    {/* Render line if we have a target and it's not a direct overlap */}
                                     {(() => {
                                         if (searchFocus.targetNodeKey !== null) {
                                             const target = nodes.find(n => n.data.key === searchFocus.targetNodeKey);
                                             // Don't draw line if it's the duplicate/overlap case (offset 0)
                                             if (target && searchFocus.key !== target.data.key) {
                                                 // Calculate start point on the edge of the ghost node
-                                                const ghostRadius = NODE_RADIUS - 2; // Radius of the ghost circle defined below
-                                                const targetRadius = NODE_RADIUS; // Radius of the target tree node
-                                                
+                                                const ghostRadius = NODE_RADIUS - 2;
+                                                const targetRadius = NODE_RADIUS;
+
                                                 const dx = target.x - searchNodePos.x;
                                                 const dy = target.y - searchNodePos.y;
-                                                const distance = Math.sqrt(dx * dx + dy * dy);
-                                                
-                                                // Calculate new start coordinates shifted by radius towards target
+                                                const distance = Math.hypot(dx, dy);
+
                                                 let newX1 = searchNodePos.x;
                                                 let newY1 = searchNodePos.y;
                                                 let newX2 = target.x;
                                                 let newY2 = target.y;
-                                                
-                                                // Ensure distance > 0 to avoid division by zero
-                                                if (distance > 0) {
-                                                     // Move start point to edge of ghost node
-                                                     newX1 += (dx / distance) * ghostRadius;
-                                                     newY1 += (dy / distance) * ghostRadius;
 
-                                                     // Move end point to edge of target node
-                                                     newX2 -= (dx / distance) * targetRadius;
-                                                     newY2 -= (dy / distance) * targetRadius;
+                                                if (distance > 0) {
+                                                    newX1 += (dx / distance) * ghostRadius;
+                                                    newY1 += (dy / distance) * ghostRadius;
+
+                                                    newX2 -= (dx / distance) * targetRadius;
+                                                    newY2 -= (dy / distance) * targetRadius;
                                                 }
 
                                                 return (
@@ -617,21 +737,21 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                         exit={{ opacity: 0, scale: 0 }}
                                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
                                     >
-                                        <circle 
-                                            r={NODE_RADIUS - 2} 
-                                            fill="var(--background)" 
-                                            stroke="var(--primary)" 
-                                            strokeWidth={2} 
+                                        <circle
+                                            r={NODE_RADIUS - 2}
+                                            fill="var(--background)"
+                                            stroke="var(--primary)"
+                                            strokeWidth={2}
                                             strokeDasharray="3 3"
                                         />
-                                        <text 
-                                            textAnchor="middle" 
-                                            dy=".3em" 
+                                        <text
+                                            textAnchor="middle"
+                                            dy=".3em"
                                             className="font-bold text-xs font-mono fill-foreground"
                                         >
                                             {searchFocus.key}
                                         </text>
-                                        
+
                                         {/* Text Background Pill for readability over links */}
                                         <motion.rect
                                             initial={{ opacity: 0 }}
@@ -645,9 +765,9 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                             className="stroke-none"
                                         />
 
-                                        <motion.text 
-                                            textAnchor="middle" 
-                                            y={-NODE_RADIUS - 10} // Fixed gap above node
+                                        <motion.text
+                                            textAnchor="middle"
+                                            y={-NODE_RADIUS - 10}
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             className="text-[10px] fill-primary font-bold uppercase tracking-widest pointer-events-none"
@@ -658,9 +778,6 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                 </React.Fragment>
                             )}
                         </AnimatePresence>
-
-                        {/* Floating Canvas Labels REMOVED */}
-
                     </g>
                 </svg>
             ) : (
