@@ -1,6 +1,7 @@
 // src/components/ExplanationBox.tsx
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Check, X, ShieldCheck, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TreeHealth } from "@/core/RedBlackTree";
@@ -12,6 +13,9 @@ interface ExplanationBoxProps {
     description?: string; 
     currentStep?: number;
     totalSteps?: number;
+    recolorData?: { prompt: string; expected: Record<number, number> };
+    onRecolorSubmit?: () => void;
+    recolorError?: string | null;
 }
 
 const RBT_RULES = [
@@ -42,7 +46,7 @@ const RBT_RULES = [
     }
 ];
 
-export function ExplanationBox({ health, className }: ExplanationBoxProps) {
+export function ExplanationBox({ health, className, recolorData, onRecolorSubmit, recolorError }: ExplanationBoxProps) {
     // Default to healthy if no data
     const currentViolations = health?.violations || [];
     const isHealthy = currentViolations.length === 0;
@@ -54,6 +58,28 @@ export function ExplanationBox({ health, className }: ExplanationBoxProps) {
             isHealthy ? "border-border" : "border-amber-200 dark:border-amber-900/50",
             className
         )}>
+            {/* NEW: Dynamic Contextual Recolor Prompt */}
+            {recolorData && (
+                <div className="p-4 border-b bg-amber-50 dark:bg-amber-950/20">
+                    <div className="flex items-start gap-3">
+                        <ShieldAlert className="size-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">{recolorData.prompt}</p>
+                            {recolorError && (
+                                <p className="text-xs font-semibold text-red-600 dark:text-red-400 mt-2">{recolorError}</p>
+                            )}
+                            <Button 
+                                size="sm" 
+                                className="mt-3 w-full bg-amber-600 hover:bg-amber-700 text-white" 
+                                onClick={onRecolorSubmit}
+                            >
+                                Verify Colors
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header Section */}
             <div className="flex items-center gap-2.5 p-4 border-b bg-card/50">
                 {isHealthy ? (

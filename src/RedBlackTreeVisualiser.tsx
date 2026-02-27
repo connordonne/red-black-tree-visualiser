@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { animate } from "framer-motion";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Hand } from "lucide-react";
 
 // Components
 import { Button } from "@/components/ui/button";
@@ -12,17 +12,15 @@ import { ExplanationBox } from "@/components/ExplanationBox";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
 import { PseudocodePanel } from "@/components/PseudocodePanel";
-import { ParsonsPanel } from "@/components/ParsonsPanel";
 import { MemoryGrid } from "@/components/MemoryGrid";
 import { NodeInspector } from "@/components/NodeInspector";
 import { ViewOptions } from "@/components/ViewOptions";
 import { SortableItem } from "@/components/SortableItem";
-import { QuizOverlay } from "@/components/QuizOverlay";
 
 // Hooks & Types
 import { useAlgorithmPlayer } from "@/hooks/useAlgorithmPlayer";
 import { useDashboardLayout } from "@/hooks/useDashboardLayout";
-import { analyzeTreeHealth } from "@/core/RedBlackTree";
+import { TreeNode, Color, analyzeTreeHealth } from "@/core/RedBlackTree";
 import type { WidgetId, ViewState, VisualSettings } from "@/types/visualiser";
 import { cn } from "@/lib/utils";
 import { ANNOTATIONS } from "@/lib/pseudocode";
@@ -31,13 +29,13 @@ import { ANNOTATIONS } from "@/lib/pseudocode";
 const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdIkCdd6WXNjq6hFFK8U1Gc6wWRps3Z7NsZ2Qy4yHjZUAaKtg/viewform?usp=publish-editor"; 
 
 export default function RedBlackTreeVisualiser() {
-    // --- View & Visual Options (Moved up for hook dependency) ---
+    // --- View & Visual Options ---
     const [visualSettings, setVisualSettings] = useState<VisualSettings>({
         colorBlindMode: false,
         showAddresses: false,
         showNils: false,
         showIsomorphic: false,
-        tutorialMode: true // Default enabled
+        tutorialMode: true
     });
 
     // --- State Logic ---
@@ -48,15 +46,14 @@ export default function RedBlackTreeVisualiser() {
     const [inputs, setInputs] = useState({ insert: "", delete: "", find: "" });
     const [activeTab, setActiveTab] = useState("insert");
     
-    // --- Interaction State ---
-    const [quizSolved, setQuizSolved] = useState(false);
-    const [parsonsSolved, setParsonsSolved] = useState(false);
+    // Interactive Recolor States
+    const [userColors, setUserColors] = useState<Record<number, number>>({});
+    const [recolorError, setRecolorError] = useState<string | null>(null);
     
     // Reset interaction states when changing steps
     useEffect(() => {
-        // When step changes, check if new step requires interaction. If not, reset solved flags.
-        setQuizSolved(false);
-        setParsonsSolved(false);
+        setUserColors({});
+        setRecolorError(null);
     }, [algorithm.currentStepIndex]);
 
     const [viewState, setViewState] = useState<ViewState>({
@@ -139,7 +136,7 @@ export default function RedBlackTreeVisualiser() {
     };
 
     // --- Computed Data ---
-    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';     
+    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';      
     const activeLines = (algorithm.currentStepData.operationType === pseudocodeMode) 
         ? algorithm.currentStepData.pseudocodeLines 
         : [];
@@ -150,27 +147,85 @@ export default function RedBlackTreeVisualiser() {
         return viewState[key];
     });
 
-    // Quiz Check (Modified for Tutorial Mode)
-    const isQuizActive = visualSettings.tutorialMode &&
-                         algorithm.currentStepData.requiresInteraction && 
-                         algorithm.currentStepData.questionData && 
-                         !quizSolved;
+    const isDragPuzzleActive = !!(
+        visualSettings.tutorialMode &&
+        algorithm.currentStepData.requiresInteraction && 
+        algorithm.currentStepData.dragPuzzleData
+    );
 
-    const handleQuizComplete = () => {
-        setQuizSolved(true);
-        algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
-    };
+    const handleDragPuzzleComplete = useCallback(() => {
+        // Increment the step index to advance beyond the puzzle
+        algorithm.setCurrentStepIndex(i => i + 1);
+    }, [algorithm]);
 
-    // Parsons Check (Modified for Tutorial Mode)
-    const isParsonsActive = visualSettings.tutorialMode &&
-                            algorithm.currentStepData.requiresInteraction && 
-                            algorithm.currentStepData.parsonsData && 
-                            !parsonsSolved;
+    const isRecolorActive = !!(
+        visualSettings.tutorialMode &&
+        algorithm.currentStepData.requiresInteraction &&
+        algorithm.currentStepData.recolorData
+    );
 
-    const handleParsonsComplete = () => {
-        setParsonsSolved(true);
-        algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
-    };
+    const findNodeByKey = useCallback((node: TreeNode | null, key: number): TreeNode | null => {
+        if (!node) return null;
+        if (node.key === key) return node;
+        return findNodeByKey(node.left, key) || findNodeByKey(node.right, key);
+    }, []);
+
+    const handleNodeClick = useCallback((key: number) => {
+        if (!isRecolorActive) return;
+        setUserColors(prev => {
+            let currentColor = prev[key];
+            if (currentColor === undefined) {
+                const node = findNodeByKey(algorithm.currentStepData.treeState, key);
+                if (node) {
+                    currentColor = node.color;
+                } else {
+                    return prev;
+                }
+            }
+            // Toggle Red (0) <-> Black (1)
+            return { ...prev, [key]: currentColor === Color.RED ? Color.BLACK : Color.RED };
+        });
+        setRecolorError(null);
+    }, [isRecolorActive, algorithm.currentStepData.treeState, findNodeByKey]);
+
+    const handleRecolorSubmit = useCallback(() => {
+        const expected = algorithm.currentStepData.recolorData?.expected;
+        if (!expected) return;
+
+        let isCorrect = true;
+
+        // 1. Check all nodes identified in the expected dataset
+        for (const [keyStr, expectedColor] of Object.entries(expected)) {
+            const key = parseInt(keyStr);
+            const node = findNodeByKey(algorithm.currentStepData.treeState, key);
+            const currentColor = userColors[key] !== undefined ? userColors[key] : node?.color;
+            if (currentColor !== expectedColor) {
+                isCorrect = false;
+                break;
+            }
+        }
+
+        // 2. Validate that the user didn't modify irrelevant/collateral nodes
+        if (isCorrect) {
+            for (const [keyStr, color] of Object.entries(userColors)) {
+                const key = parseInt(keyStr);
+                if (expected[key] === undefined) {
+                    const node = findNodeByKey(algorithm.currentStepData.treeState, key);
+                    if (node && color !== node.color) {
+                        isCorrect = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (isCorrect) {
+            algorithm.setCurrentStepIndex(algorithm.currentStepIndex + 1);
+        } else {
+            // ONLY provide the conceptual algorithm hint, no explicit node answers
+            setRecolorError(algorithm.currentStepData.recolorData?.hint || "Incorrect colors. Please review the RBT properties and try again.");
+        }
+    }, [algorithm, userColors, findNodeByKey]);
 
     // --- Health Analysis ---
     const treeHealth = useMemo(() => {
@@ -187,7 +242,7 @@ export default function RedBlackTreeVisualiser() {
             case 'tree':
                 content = (
                     <div ref={treeContainerRef} className="h-[554px] w-full rounded-xl border bg-card relative min-h-[300px] group overflow-hidden transition-colors">
-                        <div className={cn("absolute inset-0 z-0 transition-opacity duration-500", isParsonsActive ? "opacity-30 blur-sm scale-[0.98]" : "opacity-100")}>
+                        <div className={cn("absolute inset-0 z-0 transition-opacity duration-500", "opacity-100")}>
                             <TreeCanvas
                                 root={algorithm.currentStepData.treeState}
                                 highlightedKeys={algorithm.currentStepData.highlightedNodeKeys}
@@ -202,23 +257,20 @@ export default function RedBlackTreeVisualiser() {
                                 canvasLabel={algorithm.currentStepData.canvasLabel}
                                 searchFocus={algorithm.currentStepData.searchFocus} 
                                 explanation={algorithm.currentStepData.description}
+                                userColors={userColors}
+                                onNodeClick={handleNodeClick}
+                                isRecolorActive={isRecolorActive}
+                                dragPuzzleData={isDragPuzzleActive ? algorithm.currentStepData.dragPuzzleData : undefined}
+                                onDragPuzzleComplete={handleDragPuzzleComplete}
                             />
                         </div>
-                        {/* Dim Overlay when Parsons is Active to focus user on Code Panel */}
-                        {isParsonsActive && (
-                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/20 backdrop-blur-[2px]">
-                                <div className="bg-card/90 p-4 rounded-lg shadow-lg border max-w-sm text-center">
-                                    <p className="font-semibold text-muted-foreground">Construct the Rotation Logic</p>
-                                    <p className="text-xs text-muted-foreground/70 mt-1">Focus on the code panel to proceed.</p>
+                        {isDragPuzzleActive && (
+                            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                                <div className="bg-primary text-primary-foreground px-6 py-2.5 rounded-full shadow-2xl text-sm font-bold animate-in slide-in-from-top-4 flex items-center gap-3 border border-primary/20 ring-4 ring-primary/10">
+                                    <Hand className="size-4 animate-bounce" />
+                                    Construct the Rotation: Drag the nodes into their correct positions
                                 </div>
                             </div>
-                        )}
-                        {/* Quiz Overlay Positioned Over TreeCanvas */}
-                        {isQuizActive && algorithm.currentStepData.questionData && (
-                            <QuizOverlay 
-                                data={algorithm.currentStepData.questionData} 
-                                onComplete={handleQuizComplete} 
-                            />
                         )}
                         <div onMouseDown={handleResizeMouseDown} className="absolute bottom-0 right-0 p-2 cursor-ns-resize z-40 opacity-30 group-hover:opacity-100 transition-opacity">
                             <svg width="16" height="16" viewBox="0 0 12 12" fill="none" className="text-muted-foreground"><path d="M10 2L2 10M10 6L6 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -259,6 +311,9 @@ export default function RedBlackTreeVisualiser() {
                             totalSteps={algorithm.steps.length}
                             health={treeHealth}
                             className="h-full"
+                            recolorData={isRecolorActive ? algorithm.currentStepData.recolorData : undefined}
+                            onRecolorSubmit={handleRecolorSubmit}
+                            recolorError={recolorError}
                         />
                     </div>
                 );
@@ -266,7 +321,7 @@ export default function RedBlackTreeVisualiser() {
             case 'player':
                 content = (
                     <div className="h-[85px] w-full">
-                        <div className={cn("h-full relative", (isQuizActive || isParsonsActive) && "opacity-50 transition-opacity")}>
+                        <div className={cn("h-full relative", (isDragPuzzleActive || isRecolorActive) && "opacity-50 pointer-events-none transition-opacity")}>
                             <PlayerControls
                                 isPlaying={algorithm.isPlaying}
                                 onPlayPause={() => algorithm.setIsPlaying(!algorithm.isPlaying)}
@@ -318,28 +373,16 @@ export default function RedBlackTreeVisualiser() {
                 );
                 break;
             case 'pseudocode':
-                if (isParsonsActive && algorithm.currentStepData.parsonsData) {
-                    content = (
-                        <div className="h-[384px] w-full">
-                            <ParsonsPanel 
-                                data={algorithm.currentStepData.parsonsData} 
-                                onComplete={handleParsonsComplete} 
-                                className="h-full bg-card shadow-md ring-4 ring-primary/20"
-                            />
-                        </div>
-                    );
-                } else {
-                    content = (
-                        <div className="h-[384px] w-full">
-                            <PseudocodePanel
-                                mode={pseudocodeMode}
-                                activeLineNumbers={activeLines}
-                                annotations={ANNOTATIONS[pseudocodeMode]}
-                                className="h-full"
-                            />
-                        </div>
-                    );
-                }
+                content = (
+                    <div className="h-[384px] w-full">
+                        <PseudocodePanel
+                            mode={pseudocodeMode}
+                            activeLineNumbers={activeLines}
+                            annotations={ANNOTATIONS[pseudocodeMode]}
+                            className="h-full"
+                        />
+                    </div>
+                );
                 break;
         }
 
