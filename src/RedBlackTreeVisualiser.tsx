@@ -496,15 +496,6 @@ export default function RedBlackTreeVisualiser() {
                     </DndContext>
                 </div>
             </div>
-
-            {/* --- FOOTER --- */}
-            <footer className="fixed bottom-4 right-4 z-50 text-[11px] md:text-xs text-muted-foreground opacity-60 hover:opacity-100 transition-opacity pointer-events-none">
-                <span className="bg-background/80 border border-border/50 p-1.5 px-3 rounded-lg backdrop-blur shadow-sm inline-flex items-center gap-2">
-                    <span className="font-semibold text-foreground">Connor Donnelly</span>
-                    <span className="hidden sm:inline w-px h-3 bg-border" />
-                    <span className="hidden sm:inline">University of Glasgow</span>
-                </span>
-            </footer>
         </>
     );
 }
