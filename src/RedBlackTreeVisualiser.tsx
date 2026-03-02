@@ -262,6 +262,7 @@ export default function RedBlackTreeVisualiser() {
                                 isRecolorActive={isRecolorActive}
                                 dragPuzzleData={isDragPuzzleActive ? algorithm.currentStepData.dragPuzzleData : undefined}
                                 onDragPuzzleComplete={handleDragPuzzleComplete}
+                                nodeRoles={algorithm.currentStepData.nodeRoles}
                             />
                         </div>
                         {isDragPuzzleActive && (

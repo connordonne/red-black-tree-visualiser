@@ -29,7 +29,7 @@ export interface TreeHealth {
     status: HealthStatus;
     score: number;
     message: string;
-    violations: number[]; 
+    violations: number[];
 }
 
 function calculateBlackHeightStats(node: TreeNode | null): { min: number, max: number, valid: boolean } {
@@ -69,7 +69,7 @@ export const analyzeTreeHealth = (root: TreeNode | null): TreeHealth => {
 
     if (root && root.color === Color.RED) violations.push(2);
     if (hasRedRedConflict(root)) violations.push(4);
-    
+
     const bh = calculateBlackHeightStats(root);
     if (!bh.valid) violations.push(5);
 
@@ -79,16 +79,16 @@ export const analyzeTreeHealth = (root: TreeNode | null): TreeHealth => {
 
     if (violations.length > 0) {
         score = Math.max(0, 100 - (violations.length * 25));
-        
+
         if (violations.includes(5)) {
-             status = 'critical';
-             message = "Critical: Black-Height Violation";
+            status = 'critical';
+            message = "Critical: Black-Height Violation";
         } else if (violations.includes(4)) {
-             status = 'warning';
-             message = "Warning: Red-Red Conflict";
+            status = 'warning';
+            message = "Warning: Red-Red Conflict";
         } else if (violations.includes(2)) {
-             status = 'warning';
-             message = "Warning: Root is Red";
+            status = 'warning';
+            message = "Warning: Root is Red";
         }
     }
 
@@ -104,8 +104,8 @@ export interface CanvasLabel {
 
 // --- Search Focus Interface ---
 export interface SearchFocus {
-    key: number; 
-    targetNodeKey: number | null; 
+    key: number;
+    targetNodeKey: number | null;
 }
 
 // --- Recolor Interaction Interface ---
@@ -128,10 +128,11 @@ export interface Step {
     pseudocodeLines: number[];
     operationType?: 'insert' | 'delete' | 'find';
     requiresInteraction?: boolean;
-    dragPuzzleData?: DragPuzzleData; // Replaced ParsonsData
+    dragPuzzleData?: DragPuzzleData;
     canvasLabel?: CanvasLabel;
     searchFocus?: SearchFocus;
     recolorData?: RecolorData;
+    nodeRoles?: Record<number, string>;
 }
 
 export class RedBlackTree {
@@ -176,16 +177,17 @@ export class RedBlackTree {
     }
 
     private addStep(
-        steps: Step[], 
-        description: string, 
-        highlightedNodeKeys: number[], 
+        steps: Step[],
+        description: string,
+        highlightedNodeKeys: number[],
         pseudocodeLines: number[] = [],
         operationType?: 'insert' | 'delete' | 'find',
         requiresInteraction: boolean = false,
         dragPuzzleData?: DragPuzzleData,
         canvasLabel?: CanvasLabel,
         searchFocus?: SearchFocus,
-        recolorData?: RecolorData
+        recolorData?: RecolorData,
+        nodeRoles?: Record<number, string>
     ) {
         steps.push({
             treeState: this.cloneNode(this.root, null),
@@ -197,19 +199,19 @@ export class RedBlackTree {
             dragPuzzleData,
             canvasLabel,
             searchFocus,
-            recolorData
+            recolorData,
+            nodeRoles
         });
     }
 
     private leftRotate(x: TreeNode, steps: Step[], lines: number[] = []): void {
         const y = x.right;
         if (!y) return;
-        
-        // 1. Simulate rotation on a clone to get target layout for the drag puzzle
+
         const simulatedTree = this.clone();
         const simX = simulatedTree.find(x.key)!;
         const simY = simX.right!;
-        
+
         simX.right = simY.left;
         if (simY.left !== null) simY.left.parent = simX;
         simY.parent = simX.parent;
@@ -218,21 +220,19 @@ export class RedBlackTree {
         else simX.parent.right = simY;
         simY.left = simX;
         simX.parent = simY;
-        
-        // 2. Add drag puzzle step
+
         const nodesToMove = this.getSubtreeKeys(x);
         this.addStep(
-            steps, 
-            `Preparing Left Rotation around ${x.key}. Drag the highlighted nodes into their new logical positions.`, 
-            nodesToMove, 
-            lines, 
-            undefined, 
-            true, 
+            steps,
+            `Preparing Left Rotation around ${x.key}. Drag the highlighted nodes into their new logical positions.`,
+            nodesToMove,
+            lines,
+            undefined,
+            true,
             { targetTree: simulatedTree.root!, nodesToMove },
             { text: "Rotate Left ↺", targetNodeKey: x.key, type: 'rotation' }
         );
 
-        // 3. Perform actual rotation on REAL tree
         x.right = y.left;
         if (y.left !== null) y.left.parent = x;
         y.parent = x.parent;
@@ -241,7 +241,7 @@ export class RedBlackTree {
         else x.parent.right = y;
         y.left = x;
         x.parent = y;
-        
+
         this.addStep(steps, `Left rotate around ${x.key} complete.`, nodesToMove, lines);
     }
 
@@ -249,7 +249,6 @@ export class RedBlackTree {
         const x = y.left;
         if (!x) return;
 
-        // 1. Simulate rotation
         const simulatedTree = this.clone();
         const simY = simulatedTree.find(y.key)!;
         const simX = simY.left!;
@@ -263,20 +262,18 @@ export class RedBlackTree {
         simX.right = simY;
         simY.parent = simX;
 
-        // 2. Add puzzle step
         const nodesToMove = this.getSubtreeKeys(y);
         this.addStep(
-            steps, 
-            `Preparing Right Rotation around ${y.key}. Drag the highlighted nodes into their new logical positions.`, 
-            nodesToMove, 
-            lines, 
-            undefined, 
-            true, 
+            steps,
+            `Preparing Right Rotation around ${y.key}. Drag the highlighted nodes into their new logical positions.`,
+            nodesToMove,
+            lines,
+            undefined,
+            true,
             { targetTree: simulatedTree.root!, nodesToMove },
             { text: "Rotate Right ↻", targetNodeKey: y.key, type: 'rotation' }
         );
 
-        // 3. Perform actual rotation
         y.left = x.right;
         if (x.right !== null) x.right.parent = y;
         x.parent = y.parent;
@@ -285,7 +282,7 @@ export class RedBlackTree {
         else y.parent.left = x;
         x.right = y;
         y.parent = x;
-        
+
         this.addStep(steps, `Right rotate around ${y.key} complete.`, nodesToMove, lines);
     }
 
@@ -302,7 +299,7 @@ export class RedBlackTree {
 
             if (z.key < x.key) {
                 x = x.left;
-                this.addStep(steps, `${key} < ${y.key}, go Left`, [y.key], [6], 'insert', false, undefined, undefined, { key, targetNodeKey: y.key }); 
+                this.addStep(steps, `${key} < ${y.key}, go Left`, [y.key], [6], 'insert', false, undefined, undefined, { key, targetNodeKey: y.key });
             } else if (z.key > x.key) {
                 x = x.right;
                 this.addStep(steps, `${key} > ${y.key}, go Right`, [y.key], [7], 'insert', false, undefined, undefined, { key, targetNodeKey: y.key });
@@ -331,48 +328,55 @@ export class RedBlackTree {
     }
 
     private fixupInsert(z: TreeNode, steps: Step[]): void {
-        this.addStep(steps, "Checking for violations...", [z.key], [17, 18]);
+        this.addStep(steps, "Checking for violations...", [z.key], [17, 18], undefined, false, undefined, undefined, undefined, undefined, { [z.key]: 'z' });
         while (z.parent?.color === Color.RED) {
             const grandparent = z.parent.parent;
             if (!grandparent) break;
             const highlightKeys = [z.key, z.parent.key, grandparent.key];
-            
+
             if (z.parent === grandparent.left) {
                 const uncle = grandparent.right;
+                const baseRoles: Record<number, string> = { [z.key]: 'z', [z.parent.key]: 'P', [grandparent.key]: 'G' };
+                if (uncle) baseRoles[uncle.key] = 'U';
+
                 if (uncle?.color === Color.RED) {
                     this.addStep(
-                        steps, 
-                        "Case 1: Red Parent, Red Uncle.", 
-                        [...highlightKeys, uncle.key], 
-                        [21, 22, 23, 24], 
-                        undefined, 
-                        true, 
-                        undefined, 
+                        steps,
+                        "Case 1: Red Parent, Red Uncle.",
+                        [...highlightKeys, uncle.key],
+                        [21, 22, 23, 24],
+                        undefined,
+                        true,
+                        undefined,
                         { text: "Uncle is RED", targetNodeKey: uncle.key, type: 'warning' },
                         undefined,
                         {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors.",
                             expected: { [z.parent.key]: Color.BLACK, [uncle.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: Red Parent + Red Uncle means you must push Black down from the Grandparent."
-                        }
+                        },
+                        baseRoles
                     );
-                    
+
                     z.parent.color = Color.BLACK;
                     uncle.color = Color.BLACK;
                     grandparent.color = Color.RED;
                     z = grandparent;
-                    this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [25]);
+                    this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [25], undefined, false, undefined, undefined, undefined, undefined, { [z.key]: 'z' });
                 } else {
                     if (z === z.parent.right) {
-                        this.addStep(steps, "Case 2: Triangle Shape (Left-Right).", highlightKeys, [26, 27, 28], undefined, false, undefined, { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' });
+                        this.addStep(steps, "Case 2: Triangle Shape (Left-Right).", highlightKeys, [26, 27, 28], undefined, false, undefined, { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' }, undefined, undefined, baseRoles);
                         z = z.parent;
                         this.leftRotate(z, steps, [28]);
                     }
-                    
+
+                    const newBaseRoles: Record<number, string> = { [z.key]: 'z', [z.parent!.key]: 'P', [grandparent.key]: 'G' };
+                    if (uncle) newBaseRoles[uncle.key] = 'U';
+
                     this.addStep(
-                        steps, 
-                        "Case 3: Line Shape (Left-Left).", 
-                        [z.key, z.parent!.key, grandparent.key], 
+                        steps,
+                        "Case 3: Line Shape (Left-Left).",
+                        [z.key, z.parent!.key, grandparent.key],
                         [29, 30],
                         undefined,
                         true,
@@ -383,50 +387,58 @@ export class RedBlackTree {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors before rotating.",
                             expected: { [z.parent!.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: For a Line shape, swap the colors of the Parent and Grandparent to restore Black-Height after rotation."
-                        }
+                        },
+                        newBaseRoles
                     );
-                    
+
                     z.parent!.color = Color.BLACK;
                     grandparent.color = Color.RED;
-                    this.addStep(steps, "Recolored Parent BLACK, Grandparent RED.", [z.parent!.key, grandparent.key], [30]);
+                    this.addStep(steps, "Recolored Parent BLACK, Grandparent RED.", [z.parent!.key, grandparent.key], [30], undefined, false, undefined, undefined, undefined, undefined, newBaseRoles);
                     this.rightRotate(grandparent, steps, [31]);
                 }
             } else {
                 const uncle = grandparent.left;
+                const baseRoles: Record<number, string> = { [z.key]: 'z', [z.parent.key]: 'P', [grandparent.key]: 'G' };
+                if (uncle) baseRoles[uncle.key] = 'U';
+
                 if (uncle?.color === Color.RED) {
                     this.addStep(
-                        steps, 
-                        "Case 1: Red Parent, Red Uncle.", 
-                        [...highlightKeys, uncle.key], 
-                        [34, 35, 36, 37], 
-                        undefined, 
-                        true, 
-                        undefined, 
+                        steps,
+                        "Case 1: Red Parent, Red Uncle.",
+                        [...highlightKeys, uncle.key],
+                        [34, 35, 36, 37],
+                        undefined,
+                        true,
+                        undefined,
                         { text: "Uncle is RED", targetNodeKey: uncle.key, type: 'warning' },
                         undefined,
                         {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors.",
                             expected: { [z.parent.key]: Color.BLACK, [uncle.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: Red Parent + Red Uncle means you must push Black down from the Grandparent."
-                        }
+                        },
+                        baseRoles
                     );
 
                     z.parent.color = Color.BLACK;
                     uncle.color = Color.BLACK;
                     grandparent.color = Color.RED;
                     z = grandparent;
-                    this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [38]);
+                    this.addStep(steps, "Recolored Parent/Uncle BLACK, Grandparent RED. Move z up.", [z.key], [38], undefined, false, undefined, undefined, undefined, undefined, { [z.key]: 'z' });
                 } else {
                     if (z === z.parent.left) {
-                         this.addStep(steps, "Case 2: Triangle Shape (Right-Left).", highlightKeys, [39, 40, 41], undefined, false, undefined, { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' });
+                        this.addStep(steps, "Case 2: Triangle Shape (Right-Left).", highlightKeys, [39, 40, 41], undefined, false, undefined, { text: "Triangle Shape", targetNodeKey: z.parent.key, type: 'info' }, undefined, undefined, baseRoles);
                         z = z.parent;
                         this.rightRotate(z, steps, [41]);
                     }
 
+                    const newBaseRoles: Record<number, string> = { [z.key]: 'z', [z.parent!.key]: 'P', [grandparent.key]: 'G' };
+                    if (uncle) newBaseRoles[uncle.key] = 'U';
+
                     this.addStep(
-                        steps, 
-                        "Case 3: Line Shape (Right-Right).", 
-                        [z.key, z.parent!.key, grandparent.key], 
+                        steps,
+                        "Case 3: Line Shape (Right-Right).",
+                        [z.key, z.parent!.key, grandparent.key],
                         [42, 43],
                         undefined,
                         true,
@@ -437,16 +449,17 @@ export class RedBlackTree {
                             prompt: "Rule 4 Violated (Red-Red). Click the nodes to correct their colors before rotating.",
                             expected: { [z.parent!.key]: Color.BLACK, [grandparent.key]: Color.RED },
                             hint: "Hint: For a Line shape, swap the colors of the Parent and Grandparent to restore Black-Height after rotation."
-                        }
+                        },
+                        newBaseRoles
                     );
 
                     z.parent!.color = Color.BLACK;
                     grandparent.color = Color.RED;
-                    this.addStep(steps, "Recolored Parent BLACK, Grandparent RED.", [z.parent!.key, grandparent.key], [43]);
+                    this.addStep(steps, "Recolored Parent BLACK, Grandparent RED.", [z.parent!.key, grandparent.key], [43], undefined, false, undefined, undefined, undefined, undefined, newBaseRoles);
                     this.leftRotate(grandparent, steps, [44]);
                 }
             }
-            this.addStep(steps, "Checking loop condition...", [z.key], [18]);
+            this.addStep(steps, "Checking loop condition...", [z.key], [18], undefined, false, undefined, undefined, undefined, undefined, { [z.key]: 'z' });
         }
         if (this.root && this.root.color !== Color.BLACK) {
             this.root.color = Color.BLACK;
@@ -525,52 +538,77 @@ export class RedBlackTree {
         let parentOfCurrent = xParent;
         while (current !== this.root && (current === null || current.color === Color.BLACK)) {
             if (parentOfCurrent === null) break;
-            this.addStep(steps, "Checking fixup loop...", parentOfCurrent ? [parentOfCurrent.key] : [], [21]);
+
+            const baseRoles: Record<number, string> = {};
+            if (current) baseRoles[current.key] = 'x';
+            if (parentOfCurrent) baseRoles[parentOfCurrent.key] = 'P';
+
+            this.addStep(steps, "Checking fixup loop...", parentOfCurrent ? [parentOfCurrent.key] : [], [21], undefined, false, undefined, undefined, undefined, undefined, baseRoles);
+
             const highlightBase = parentOfCurrent ? [parentOfCurrent.key] : [];
             if (current) highlightBase.push(current.key);
-            
+
             if (current === parentOfCurrent.left) {
                 let sibling = parentOfCurrent.right;
                 if (sibling === null) break;
+
+                const rolesCase1 = { ...baseRoles, [sibling.key]: 'w' };
+
                 if (sibling.color === Color.RED) {
                     this.addStep(steps, "Sibling is RED (Case 1). Recolor and Rotate Left.", [...highlightBase, sibling.key], [24, 25, 26, 27], undefined, true, undefined, { text: "Sibling Red", targetNodeKey: sibling.key, type: 'warning'}, undefined, {
                         prompt: "Sibling is RED (Case 1). Fix the colors before rotating.",
                         expected: { [sibling.key]: Color.BLACK, [parentOfCurrent.key]: Color.RED },
                         hint: "Hint: To fix a Red sibling, swap the colors of the parent and the sibling to prepare for rotation."
-                    });
+                    }, rolesCase1);
+
                     sibling.color = Color.BLACK;
                     parentOfCurrent.color = Color.RED;
                     this.leftRotate(parentOfCurrent, steps, [27]);
                     sibling = parentOfCurrent.right;
                     if (sibling === null) break;
-                    this.addStep(steps, "Case 1 complete. New sibling found.", [], [28]);
+                    this.addStep(steps, "Case 1 complete. New sibling found.", [], [28], undefined, false, undefined, undefined, undefined, undefined, { ...baseRoles, [sibling.key]: 'w' });
                 }
+
                 const isLeftChildBlack = sibling.left === null || sibling.left.color === Color.BLACK;
                 const isRightChildBlack = sibling.right === null || sibling.right.color === Color.BLACK;
+
+                const rolesCase234 = { ...baseRoles, [sibling.key]: 'w' };
+                if (sibling.left) rolesCase234[sibling.left.key] = 'L';
+                if (sibling.right) rolesCase234[sibling.right.key] = 'R';
+
                 if (isLeftChildBlack && isRightChildBlack) {
                     this.addStep(steps, "Sibling's children are BLACK (Case 2). Recolor Sibling RED.", [...highlightBase, sibling.key], [29, 30], undefined, true, undefined, undefined, undefined, {
                         prompt: "Sibling's children are BLACK (Case 2). Fix the color of the sibling.",
                         expected: { [sibling.key]: Color.RED },
                         hint: "Hint: If the sibling and both nephews are Black, push the 'extra black' up by making the sibling Red."
-                    });
+                    }, rolesCase234);
+
                     sibling.color = Color.RED;
                     current = parentOfCurrent;
                     parentOfCurrent = current.parent;
-                    this.addStep(steps, "Case 2 complete. Move x up.", current ? [current.key] : [], [31]);
+
+                    const updatedBaseRoles: Record<number, string> = {};
+                    if (current) updatedBaseRoles[current.key] = 'x';
+                    if (parentOfCurrent) updatedBaseRoles[parentOfCurrent.key] = 'P';
+                    this.addStep(steps, "Case 2 complete. Move x up.", current ? [current.key] : [], [31], undefined, false, undefined, undefined, undefined, undefined, updatedBaseRoles);
                 } else {
                     if (isRightChildBlack) {
                         this.addStep(steps, "Sibling Right Child is BLACK (Case 3). Recolor and Rotate Right.", [...highlightBase, sibling.key], [32, 33, 34, 35], undefined, true, undefined, { text: "Close Nephew Red", targetNodeKey: sibling.left ? sibling.left.key : sibling.key, type: 'info' }, undefined, {
                             prompt: "Close nephew is RED (Case 3). Fix colors before rotation.",
                             expected: { [sibling.key]: Color.RED, ...(sibling.left ? { [sibling.left.key]: Color.BLACK } : {}) },
                             hint: "Hint: Swap the colors of the sibling and its close Red nephew to push the Red node outward."
-                        });
+                        }, rolesCase234);
                         if (sibling.left) sibling.left.color = Color.BLACK;
                         sibling.color = Color.RED;
                         this.rightRotate(sibling, steps, [35]);
                         sibling = parentOfCurrent.right;
                         if (sibling === null) break;
-                        this.addStep(steps, "Case 3 complete. New sibling found.", [], [36]);
+                        this.addStep(steps, "Case 3 complete. New sibling found.", [], [36], undefined, false, undefined, undefined, undefined, undefined, { ...baseRoles, [sibling.key]: 'w' });
                     }
+
+                    const rolesCase4 = { ...baseRoles, [sibling.key]: 'w' };
+                    if (sibling.right) rolesCase4[sibling.right.key] = 'R';
+
                     this.addStep(steps, "Sibling Right Child is RED (Case 4). Recolor and Rotate Left.", [...highlightBase, sibling.key], [37, 38, 39, 40], undefined, true, undefined, { text: "Far Nephew Red", targetNodeKey: sibling.right ? sibling.right.key : sibling.key, type: 'info' }, undefined, {
                         prompt: "Far nephew is RED (Case 4). Fix colors to restore Black-Height before final rotation.",
                         expected: {
@@ -579,53 +617,76 @@ export class RedBlackTree {
                             ...(sibling.right ? { [sibling.right.key]: Color.BLACK } : {})
                         },
                         hint: "Hint: The sibling takes the parent's color, while the parent and the far Red nephew are colored Black."
-                    });
+                    }, rolesCase4);
+
                     sibling.color = parentOfCurrent.color;
                     parentOfCurrent.color = Color.BLACK;
                     if (sibling.right) sibling.right.color = Color.BLACK;
                     this.leftRotate(parentOfCurrent, steps, [40]);
                     current = this.root;
-                    this.addStep(steps, "Case 4 complete. Terminate loop.", [], [41]);
+                    this.addStep(steps, "Case 4 complete. Terminate loop.", [], [41], undefined, false, undefined, undefined, undefined, undefined, current ? { [current.key]: 'x' } : {});
                 }
             } else {
                 let sibling = parentOfCurrent.left;
                 if (sibling === null) break;
+
+                const rolesCase1 = { ...baseRoles, [sibling.key]: 'w' };
+
                 if (sibling.color === Color.RED) {
                     this.addStep(steps, "Sibling is RED (Case 1 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [44, 45, 46, 47], undefined, true, undefined, { text: "Sibling Red", targetNodeKey: sibling.key, type: 'warning'}, undefined, {
                         prompt: "Sibling is RED (Case 1 Sym). Fix the colors before rotating.",
                         expected: { [sibling.key]: Color.BLACK, [parentOfCurrent.key]: Color.RED },
                         hint: "Hint: To fix a Red sibling, swap the colors of the parent and the sibling to prepare for rotation."
-                    });
+                    }, rolesCase1);
+
                     sibling.color = Color.BLACK;
                     parentOfCurrent.color = Color.RED;
                     this.rightRotate(parentOfCurrent, steps, [47]);
                     sibling = parentOfCurrent.left;
                     if (sibling === null) break;
+                    this.addStep(steps, "Case 1 Sym complete. New sibling found.", [], [48], undefined, false, undefined, undefined, undefined, undefined, { ...baseRoles, [sibling.key]: 'w' });
                 }
+
                 const isLeftChildBlack = sibling.left === null || sibling.left.color === Color.BLACK;
                 const isRightChildBlack = sibling.right === null || sibling.right.color === Color.BLACK;
+
+                const rolesCase234 = { ...baseRoles, [sibling.key]: 'w' };
+                if (sibling.left) rolesCase234[sibling.left.key] = 'L';
+                if (sibling.right) rolesCase234[sibling.right.key] = 'R';
+
                 if (isLeftChildBlack && isRightChildBlack) {
                     this.addStep(steps, "Sibling's children are BLACK (Case 2 Sym). Recolor Sibling RED.", [...highlightBase, sibling.key], [49, 50], undefined, true, undefined, undefined, undefined, {
                         prompt: "Sibling's children are BLACK (Case 2 Sym). Fix the color of the sibling.",
                         expected: { [sibling.key]: Color.RED },
                         hint: "Hint: If the sibling and both nephews are Black, push the 'extra black' up by making the sibling Red."
-                    });
+                    }, rolesCase234);
+
                     sibling.color = Color.RED;
                     current = parentOfCurrent;
                     parentOfCurrent = current.parent;
+
+                    const updatedBaseRoles: Record<number, string> = {};
+                    if (current) updatedBaseRoles[current.key] = 'x';
+                    if (parentOfCurrent) updatedBaseRoles[parentOfCurrent.key] = 'P';
+                    this.addStep(steps, "Case 2 Sym complete. Move x up.", current ? [current.key] : [], [51], undefined, false, undefined, undefined, undefined, undefined, updatedBaseRoles);
                 } else {
                     if (isLeftChildBlack) {
                         this.addStep(steps, "Sibling Left Child is BLACK (Case 3 Sym). Recolor and Rotate Left.", [...highlightBase, sibling.key], [52, 53, 54, 55], undefined, true, undefined, { text: "Close Nephew Red", targetNodeKey: sibling.right ? sibling.right.key : sibling.key, type: 'info' }, undefined, {
                             prompt: "Close nephew is RED (Case 3 Sym). Fix colors before rotation.",
                             expected: { [sibling.key]: Color.RED, ...(sibling.right ? { [sibling.right.key]: Color.BLACK } : {}) },
                             hint: "Hint: Swap the colors of the sibling and its close Red nephew to push the Red node outward."
-                        });
+                        }, rolesCase234);
                         if (sibling.right) sibling.right.color = Color.BLACK;
                         sibling.color = Color.RED;
                         this.leftRotate(sibling, steps, [55]);
                         sibling = parentOfCurrent.left;
                         if (sibling === null) break;
+                        this.addStep(steps, "Case 3 Sym complete. New sibling found.", [], [56], undefined, false, undefined, undefined, undefined, undefined, { ...baseRoles, [sibling.key]: 'w' });
                     }
+
+                    const rolesCase4 = { ...baseRoles, [sibling.key]: 'w' };
+                    if (sibling.left) rolesCase4[sibling.left.key] = 'L';
+
                     this.addStep(steps, "Sibling Left Child is RED (Case 4 Sym). Recolor and Rotate Right.", [...highlightBase, sibling.key], [57, 58, 59, 60], undefined, true, undefined, { text: "Far Nephew Red", targetNodeKey: sibling.left ? sibling.left.key : sibling.key, type: 'info' }, undefined, {
                         prompt: "Far nephew is RED (Case 4 Sym). Fix colors to restore Black-Height before final rotation.",
                         expected: {
@@ -634,7 +695,8 @@ export class RedBlackTree {
                             ...(sibling.left ? { [sibling.left.key]: Color.BLACK } : {})
                         },
                         hint: "Hint: The sibling takes the parent's color, while the parent and the far Red nephew are colored Black."
-                    });
+                    }, rolesCase4);
+
                     sibling.color = parentOfCurrent.color;
                     parentOfCurrent.color = Color.BLACK;
                     if (sibling.left) sibling.left.color = Color.BLACK;
@@ -645,7 +707,7 @@ export class RedBlackTree {
         }
         if (current !== null) {
             current.color = Color.BLACK;
-            this.addStep(steps, "Set x to BLACK.", [current.key], [62]);
+            this.addStep(steps, "Set x to BLACK.", [current.key], [62], undefined, false, undefined, undefined, undefined, undefined, { [current.key]: 'x' });
         }
     }
 
@@ -661,9 +723,9 @@ export class RedBlackTree {
     search(key: number): Step[] {
         const steps: Step[] = [];
         this.addStep(
-            steps, 
-            `Starting search for ${key}.`, 
-            this.root ? [this.root.key] : [], 
+            steps,
+            `Starting search for ${key}.`,
+            this.root ? [this.root.key] : [],
             [1],
             'find',
             false,
@@ -675,9 +737,9 @@ export class RedBlackTree {
         let x = this.root;
         while (x !== null) {
             this.addStep(
-                steps, 
-                `Comparing ${key} with ${x.key}.`, 
-                [x.key], 
+                steps,
+                `Comparing ${key} with ${x.key}.`,
+                [x.key],
                 [2, 3],
                 'find',
                 false,
@@ -689,8 +751,8 @@ export class RedBlackTree {
             if (key === x.key) {
                 this.addStep(steps, `Found key ${key}!`, [x.key], [6], 'find', false, undefined, undefined, { key, targetNodeKey: x.key });
                 return steps;
-            } 
-            
+            }
+
             const parentKey = x.key;
 
             if (key < x.key) {
@@ -703,7 +765,7 @@ export class RedBlackTree {
             } else {
                 x = x.right;
                 if (x) {
-                     this.addStep(steps, `${key} > ${parentKey}. Go Right.`, [x.key], [5], 'find', false, undefined, undefined, { key, targetNodeKey: x.key });
+                    this.addStep(steps, `${key} > ${parentKey}. Go Right.`, [x.key], [5], 'find', false, undefined, undefined, { key, targetNodeKey: x.key });
                 } else {
                     this.addStep(steps, `${key} > ${parentKey}. Right child is NIL.`, [], [5], 'find', false, undefined, undefined, { key, targetNodeKey: null });
                 }

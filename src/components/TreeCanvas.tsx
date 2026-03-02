@@ -29,6 +29,7 @@ interface TreeCanvasProps {
     isRecolorActive?: boolean;
     dragPuzzleData?: DragPuzzleData;
     onDragPuzzleComplete?: () => void;
+    nodeRoles?: Record<number, string>;
 }
 
 const NODE_RADIUS = 22;
@@ -50,7 +51,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    onNodeClick,
                                                    isRecolorActive,
                                                    dragPuzzleData,
-                                                   onDragPuzzleComplete
+                                                   onDragPuzzleComplete,
+                                                   nodeRoles
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -111,7 +113,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
             if (target) {
                 if (searchFocus.key === target.data.key) return { x: target.x, y: target.y };
 
-                let xOffset = 0;
+                let xOffset: number;
                 if (rootKey !== null) {
                     if (searchFocus.key < rootKey) xOffset = -65;
                     else xOffset = 65;
@@ -295,13 +297,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
         zoomBehavior.current = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
             .filter((event: unknown) => {
-                const e = event as MouseEvent;
-                const target = e.target as Element | null;
-
-                // Ignore D3 zoom/pan if the target is an active draggable node
-                if (target?.closest('.draggable-node')) return false;
-
-                // Default D3 filter behaviour
+                const e = event as { target?: { closest?: (s: string) => Element | null }; ctrlKey?: boolean; type?: string; button?: number };
+                if (e.target?.closest?.('.draggable-node')) return false;
                 return (!e.ctrlKey || e.type === 'wheel') && !e.button;
             })
             .on("zoom", (event) => {
@@ -674,6 +671,33 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                         >
                                             {showAddresses ? toHex(node.data.address) : node.data.key}
                                         </text>
+
+                                        {nodeRoles?.[node.data.key] && !isDummy && (
+                                            <motion.g
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                exit={{ scale: 0 }}
+                                                className="pointer-events-none"
+                                            >
+                                                <circle
+                                                    cx={NODE_RADIUS * 0.707 + 6}
+                                                    cy={-NODE_RADIUS * 0.707 - 6}
+                                                    r={10}
+                                                    fill="var(--chart-5)"
+                                                    stroke="var(--background)"
+                                                    strokeWidth={2}
+                                                />
+                                                <text
+                                                    x={NODE_RADIUS * 0.707 + 6}
+                                                    y={-NODE_RADIUS * 0.707 - 6}
+                                                    textAnchor="middle"
+                                                    dy=".3em"
+                                                    className="text-[10px] font-bold fill-white font-sans uppercase"
+                                                >
+                                                    {nodeRoles[node.data.key]}
+                                                </text>
+                                            </motion.g>
+                                        )}
                                     </motion.g>
                                 );
                             })}
@@ -790,3 +814,4 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 };
 
 export default TreeCanvas;
+
