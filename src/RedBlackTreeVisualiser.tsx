@@ -67,7 +67,49 @@ export default function RedBlackTreeVisualiser() {
     // --- Interaction State (Visuals) ---
     const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
     const [hoveredAddress, setHoveredAddress] = useState<number | null>(null);
-    
+
+    // Interactive Code <-> Tree Link State
+    const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+    const [hoveredNodeKey, setHoveredNodeKey] = useState<number | null>(null);
+
+    // Hardcoded logic maps pointing algorithm lines directly to the roles they affect
+    const LINE_TO_ROLES: Record<string, Record<number, string[]>> = useMemo(() => ({
+        insert: {
+            17: ['z'], 18: ['z', 'P'], 21: ['P', 'G'], 22: ['U'], 23: ['P'], 24: ['U'], 25: ['G'],
+            26: ['z', 'P'], 27: ['z'], 28: ['z'], 29: ['z', 'P', 'G'], 30: ['P', 'G'], 31: ['G'],
+            34: ['P', 'G'], 35: ['U'], 36: ['P'], 37: ['U'], 38: ['G'], 39: ['z', 'P'], 40: ['z'],
+            41: ['z'], 42: ['z', 'P', 'G'], 43: ['P', 'G'], 44: ['G']
+        },
+        delete: {
+            21: ['x', 'P'], 24: ['w'], 25: ['w'], 26: ['P'], 27: ['P'], 29: ['w', 'L', 'R'],
+            30: ['w'], 32: ['w', 'R'], 33: ['L'], 34: ['w'], 35: ['w'], 37: ['w', 'R'],
+            38: ['w'], 39: ['P'], 40: ['R'], 44: ['w'], 45: ['w'], 46: ['P'], 47: ['P'],
+            49: ['w', 'L', 'R'], 50: ['w'], 52: ['w', 'L'], 53: ['R'], 54: ['w'], 55: ['w'],
+            57: ['w', 'L'], 58: ['w'], 59: ['P'], 60: ['L'], 62: ['x']
+        }
+    }), []);
+
+    const glowingNodeKeys = useMemo(() => {
+        if (hoveredLine === null || !algorithm.currentStepData.nodeRoles || !algorithm.currentStepData.operationType) return [];
+        const opType = algorithm.currentStepData.operationType;
+        const rolesForLine = LINE_TO_ROLES[opType]?.[hoveredLine] || [];
+
+        return Object.entries(algorithm.currentStepData.nodeRoles)
+            .filter(([_, role]) => rolesForLine.includes(role))
+            .map(([key]) => parseInt(key));
+    }, [hoveredLine, algorithm.currentStepData, LINE_TO_ROLES]);
+
+    const glowingLines = useMemo(() => {
+        if (hoveredNodeKey === null || !algorithm.currentStepData.nodeRoles || !algorithm.currentStepData.operationType) return [];
+        const opType = algorithm.currentStepData.operationType;
+        const role = algorithm.currentStepData.nodeRoles[hoveredNodeKey];
+        if (!role) return [];
+
+        return Object.entries(LINE_TO_ROLES[opType] || {})
+            .filter(([_, rolesForLine]) => rolesForLine.includes(role))
+            .map(([line]) => parseInt(line));
+    }, [hoveredNodeKey, algorithm.currentStepData, LINE_TO_ROLES]);
+
     // --- Tree Resizing Logic ---
     const treeContainerRef = useRef<HTMLDivElement>(null);
     
@@ -263,6 +305,8 @@ export default function RedBlackTreeVisualiser() {
                                 dragPuzzleData={isDragPuzzleActive ? algorithm.currentStepData.dragPuzzleData : undefined}
                                 onDragPuzzleComplete={handleDragPuzzleComplete}
                                 nodeRoles={algorithm.currentStepData.nodeRoles}
+                                onHoverNodeKey={setHoveredNodeKey}
+                                glowingNodeKeys={glowingNodeKeys}
                             />
                         </div>
                         {isDragPuzzleActive && (
@@ -381,6 +425,8 @@ export default function RedBlackTreeVisualiser() {
                             activeLineNumbers={activeLines}
                             annotations={ANNOTATIONS[pseudocodeMode]}
                             className="h-full"
+                            onHoverLine={setHoveredLine}
+                            glowingLines={glowingLines}
                         />
                     </div>
                 );

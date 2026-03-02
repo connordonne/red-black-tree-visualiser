@@ -9,11 +9,14 @@ import { cn } from '@/lib/utils';
 import { ALGORITHMS } from '@/lib/pseudocode';
 
 export interface PseudocodePanelProps {
-    mode: 'insert' | 'delete' | 'find'; 
-    activeLineNumbers: number[]; 
+    mode: 'insert' | 'delete' | 'find';
+    activeLineNumbers: number[];
     annotations?: Record<number, string>;
     onCopy?: () => void;
     className?: string;
+    hoveredLine?: number | null;
+    onHoverLine?: (line: number | null) => void;
+    glowingLines?: number[];
 }
 
 
@@ -55,7 +58,9 @@ export function PseudocodePanel({
                                     activeLineNumbers = [],
                                     annotations = {},
                                     onCopy,
-                                    className
+                                    className,
+                                    onHoverLine,
+                                    glowingLines = []
                                 }: PseudocodePanelProps) {
     const [copied, setCopied] = useState(false);
     const [debugLine, setDebugLine] = useState<number | null>(null);
@@ -172,12 +177,19 @@ export function PseudocodePanel({
                         return (
                             <div key={lineNumber} className="flex flex-col">
                                 <div
-                                    ref={(el: HTMLDivElement | null) => { lineRefs.current[lineNumber] = el; }}
+                                    ref={(el: HTMLDivElement | null) => {
+                                        lineRefs.current[lineNumber] = el;
+                                    }}
+                                    onMouseEnter={() => onHoverLine?.(lineNumber)}
+                                    onMouseLeave={() => onHoverLine?.(null)}
                                     className={cn(
-                                        "group flex w-full px-4 border-l-4 transition-colors duration-150",
+                                        "group flex w-full px-4 border-l-4 transition-all duration-150 cursor-pointer",
                                         isActive
                                             ? "bg-primary/10 border-l-primary text-foreground"
-                                            : "border-l-transparent text-muted-foreground hover:bg-muted/30"
+                                            : "border-l-transparent text-muted-foreground hover:bg-muted/30",
+                                        glowingLines.includes(lineNumber)
+                                            ? "bg-chart-4/20 border-l-chart-4 font-bold text-foreground"
+                                            : ""
                                     )}
                                     title={isActive ? undefined : (annotation || undefined)}
                                 >
@@ -197,9 +209,11 @@ export function PseudocodePanel({
                                 </div>
 
                                 {isActive && annotation && (
-                                    <div className="pl-16 pr-4 py-2 bg-primary/5 border-l-4 border-l-primary/50 animate-in slide-in-from-top-1 duration-200">
-                                        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded border shadow-sm">
-                                            <Info className="size-3.5 mt-0.5 text-primary shrink-0" />
+                                    <div
+                                        className="pl-16 pr-4 py-2 bg-primary/5 border-l-4 border-l-primary/50 animate-in slide-in-from-top-1 duration-200">
+                                        <div
+                                            className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded border shadow-sm">
+                                            <Info className="size-3.5 mt-0.5 text-primary shrink-0"/>
                                             <span className="leading-snug">
                                                 <span className="font-semibold text-primary/80 mr-1">Why:</span>
                                                 {annotation}
@@ -210,7 +224,7 @@ export function PseudocodePanel({
                             </div>
                         );
                     })}
-                    <div className="h-8" />
+                    <div className="h-8"/>
                 </div>
             </CardContent>
         </Card>
