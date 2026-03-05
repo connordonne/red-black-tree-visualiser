@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, Terminal, ArrowDownCircle, Maximize2, Minimize2, GripHorizontal, Info } from 'lucide-react';
+import { Copy, Check, Terminal, ArrowDownCircle, Maximize2, Minimize2, GripHorizontal} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ALGORITHMS } from '@/lib/pseudocode';
 import type { DragControls } from 'framer-motion';
