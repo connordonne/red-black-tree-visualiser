@@ -35,6 +35,8 @@ interface TreeCanvasProps {
     showPseudocode?: boolean;
     pseudocodeMode?: 'insert' | 'delete' | 'find';
     activeLines?: number[];
+    onHoverNodeKey?: (key: number | null) => void;
+    glowingNodeKeys?: number[];
 }
 
 const NODE_RADIUS = 22;
@@ -60,7 +62,9 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    nodeRoles,
                                                    showPseudocode,
                                                    pseudocodeMode,
-                                                   activeLines
+                                                   activeLines,
+                                                   onHoverNodeKey,
+                                                   glowingNodeKeys = []
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -653,8 +657,14 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 }));
                                             }
                                         }}
-                                        onMouseEnter={() => onHoverAddress?.(node.data.address)}
-                                        onMouseLeave={() => onHoverAddress?.(null)}
+                                        onMouseEnter={() => {
+                                            onHoverAddress?.(node.data.address);
+                                            onHoverNodeKey?.(node.data.key);
+                                        }}
+                                        onMouseLeave={() => {
+                                            onHoverAddress?.(null);
+                                            onHoverNodeKey?.(null);
+                                        }}
                                         onClick={() => {
                                             if (isRecolorActive && onNodeClick) {
                                                 onNodeClick(node.data.key);
@@ -685,6 +695,18 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                 stroke="var(--primary)"
                                                 strokeWidth={2}
                                                 strokeDasharray="4 4"
+                                            />
+                                        )}
+
+                                        {glowingNodeKeys.includes(node.data.key) && !isDragPuzzleActive && (
+                                            <motion.circle
+                                                r={NODE_RADIUS + 8}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: [0.3, 0.8, 0.3] }}
+                                                transition={{ duration: 1, repeat: Infinity }}
+                                                fill="none"
+                                                stroke="var(--chart-4)"
+                                                strokeWidth={4}
                                             />
                                         )}
 

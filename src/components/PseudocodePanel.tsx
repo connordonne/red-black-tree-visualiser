@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, Terminal, ArrowDownCircle, Maximize2, Minimize2, GripHorizontal } from 'lucide-react';
+import { Copy, Check, Terminal, ArrowDownCircle, Maximize2, Minimize2, GripHorizontal, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ALGORITHMS } from '@/lib/pseudocode';
 import type { DragControls } from 'framer-motion';
@@ -16,6 +16,9 @@ export interface PseudocodePanelProps {
     onCopy?: () => void;
     className?: string;
     dragControls?: DragControls;
+    hoveredLine?: number | null;
+    onHoverLine?: (line: number | null) => void;
+    glowingLines?: number[];
 }
 
 const highlightSyntax = (line: string) => {
@@ -54,9 +57,12 @@ const highlightSyntax = (line: string) => {
 export function PseudocodePanel({
                                     mode,
                                     activeLineNumbers = [],
+                                    annotations,
                                     onCopy,
                                     className,
-                                    dragControls
+                                    dragControls,
+                                    onHoverLine,
+                                    glowingLines = []
                                 }: PseudocodePanelProps) {
     const [copied, setCopied] = useState(false);
     const [debugLine, setDebugLine] = useState<number | null>(null);
@@ -190,17 +196,24 @@ export function PseudocodePanel({
                             const lineContent = rawLineContent.trimEnd();
                             const lineNumber = index + 1;
                             const isActive = currentHighlights.includes(lineNumber);
+                            const annotation = annotations?.[lineNumber];
 
                             return (
                                 <div key={lineNumber} className="flex flex-col items-start max-w-full">
                                     <div
                                         ref={(el: HTMLDivElement | null) => { lineRefs.current[lineNumber] = el; }}
+                                        onMouseEnter={() => onHoverLine?.(lineNumber)}
+                                        onMouseLeave={() => onHoverLine?.(null)}
                                         className={cn(
-                                            "group/line inline-flex items-center w-fit max-w-full px-2 md:px-3 border-l-2 transition-all duration-150 py-0.5",
+                                            "group/line inline-flex items-center w-fit max-w-full px-2 md:px-3 border-l-2 transition-all duration-150 py-0.5 cursor-pointer",
                                             isActive
                                                 ? "bg-primary/20 backdrop-blur-md border-l-primary text-foreground rounded-r-md shadow-sm"
-                                                : "border-l-transparent text-foreground/80 hover:bg-background/50 hover:backdrop-blur-sm hover:text-foreground rounded-r-md"
+                                                : "border-l-transparent text-foreground/80 hover:bg-background/50 hover:backdrop-blur-sm hover:text-foreground rounded-r-md",
+                                            glowingLines.includes(lineNumber)
+                                                ? "bg-chart-4/20 border-l-chart-4 font-bold text-foreground"
+                                                : ""
                                         )}
+                                        title={isActive ? undefined : (annotation || undefined)}
                                     >
                                         <span className={cn(
                                             "inline-block w-6 mr-2 text-right select-none opacity-40 shrink-0",
@@ -216,6 +229,18 @@ export function PseudocodePanel({
                                             {highlightSyntax(lineContent)}
                                         </span>
                                     </div>
+
+                                    {isActive && annotation && (
+                                        <div className="pl-10 pr-4 py-1.5 bg-primary/5 border-l-2 border-l-primary/50 animate-in slide-in-from-top-1 duration-200 w-fit">
+                                            <div className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded border shadow-sm">
+                                                <Info className="size-3.5 mt-0.5 text-primary shrink-0"/>
+                                                <span className="leading-snug">
+                                                    <span className="font-semibold text-primary/80 mr-1">Why:</span>
+                                                    {annotation}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
