@@ -11,7 +11,6 @@ import { PlayerControls } from "@/components/PlayerControls";
 import { ExplanationBox } from "@/components/ExplanationBox";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import TreeCanvas from "@/components/TreeCanvas";
-import { PseudocodePanel } from "@/components/PseudocodePanel";
 import { MemoryGrid } from "@/components/MemoryGrid";
 import { NodeInspector } from "@/components/NodeInspector";
 import { ViewOptions } from "@/components/ViewOptions";
@@ -23,10 +22,9 @@ import { useDashboardLayout } from "@/hooks/useDashboardLayout";
 import { TreeNode, Color, analyzeTreeHealth } from "@/core/RedBlackTree";
 import type { WidgetId, ViewState, VisualSettings } from "@/types/visualiser";
 import { cn } from "@/lib/utils";
-import { ANNOTATIONS } from "@/lib/pseudocode";
 
 // Configuration
-const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdIkCdd6WXNjq6hFFK8U1Gc6wWRps3Z7NsZ2Qy4yHjZUAaKtg/viewform?usp=publish-editor"; 
+const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdIkCdd6WXNjq6hFFK8U1Gc6wWRps3Z7NsZ2Qy4yHjZUAaKtg/viewform?usp=publish-editor";
 
 export default function RedBlackTreeVisualiser() {
     // --- View & Visual Options ---
@@ -45,11 +43,11 @@ export default function RedBlackTreeVisualiser() {
     // --- Inputs State ---
     const [inputs, setInputs] = useState({ insert: "", delete: "", find: "" });
     const [activeTab, setActiveTab] = useState("insert");
-    
+
     // Interactive Recolor States
     const [userColors, setUserColors] = useState<Record<number, number>>({});
     const [recolorError, setRecolorError] = useState<string | null>(null);
-    
+
     // Reset interaction states when changing steps
     useEffect(() => {
         setUserColors({});
@@ -67,14 +65,14 @@ export default function RedBlackTreeVisualiser() {
     // --- Interaction State (Visuals) ---
     const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
     const [hoveredAddress, setHoveredAddress] = useState<number | null>(null);
-    
+
     // --- Tree Resizing Logic ---
     const treeContainerRef = useRef<HTMLDivElement>(null);
-    
+
     const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const startY = e.clientY;
         const startHeight = treeContainerRef.current?.offsetHeight || 554;
 
@@ -136,20 +134,20 @@ export default function RedBlackTreeVisualiser() {
     };
 
     // --- Computed Data ---
-    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';      
-    const activeLines = (algorithm.currentStepData.operationType === pseudocodeMode) 
-        ? algorithm.currentStepData.pseudocodeLines 
+    const pseudocodeMode = (activeTab === 'delete' || activeTab === 'find') ? activeTab : 'insert';
+    const activeLines = (algorithm.currentStepData.operationType === pseudocodeMode)
+        ? algorithm.currentStepData.pseudocodeLines
         : [];
 
     const isSidebarVisible = layout.columns.sidebar.some(id => {
-        if (id === 'player') return true; 
+        if (id === 'player') return true;
         const key = `show${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof ViewState;
         return viewState[key];
     });
 
     const isDragPuzzleActive = !!(
         visualSettings.tutorialMode &&
-        algorithm.currentStepData.requiresInteraction && 
+        algorithm.currentStepData.requiresInteraction &&
         algorithm.currentStepData.dragPuzzleData
     );
 
@@ -248,14 +246,14 @@ export default function RedBlackTreeVisualiser() {
                                 highlightedKeys={algorithm.currentStepData.highlightedNodeKeys}
                                 colorBlindMode={visualSettings.colorBlindMode}
                                 showAddresses={visualSettings.showAddresses}
-                                showNils={visualSettings.showNils}  
-                                toggleNils={() => setVisualSettings(p => ({ ...p, showNils: !p.showNils }))} 
+                                showNils={visualSettings.showNils}
+                                toggleNils={() => setVisualSettings(p => ({ ...p, showNils: !p.showNils }))}
                                 hoveredAddress={hoveredAddress}
                                 onHoverAddress={setHoveredAddress}
                                 onResetContainerSize={resetTreeSize}
-                                showIsomorphic={visualSettings.showIsomorphic} 
+                                showIsomorphic={visualSettings.showIsomorphic}
                                 canvasLabel={algorithm.currentStepData.canvasLabel}
-                                searchFocus={algorithm.currentStepData.searchFocus} 
+                                searchFocus={algorithm.currentStepData.searchFocus}
                                 explanation={algorithm.currentStepData.description}
                                 userColors={userColors}
                                 onNodeClick={handleNodeClick}
@@ -263,6 +261,9 @@ export default function RedBlackTreeVisualiser() {
                                 dragPuzzleData={isDragPuzzleActive ? algorithm.currentStepData.dragPuzzleData : undefined}
                                 onDragPuzzleComplete={handleDragPuzzleComplete}
                                 nodeRoles={algorithm.currentStepData.nodeRoles}
+                                showPseudocode={viewState.showPseudocode}
+                                pseudocodeMode={pseudocodeMode}
+                                activeLines={activeLines}
                             />
                         </div>
                         {isDragPuzzleActive && (
@@ -307,9 +308,6 @@ export default function RedBlackTreeVisualiser() {
                 content = (
                     <div className="h-full w-full">
                         <ExplanationBox
-                            description={algorithm.currentStepData.description}
-                            currentStep={algorithm.currentStepIndex + 1}
-                            totalSteps={algorithm.steps.length}
                             health={treeHealth}
                             className="h-full"
                             recolorData={isRecolorActive ? algorithm.currentStepData.recolorData : undefined}
@@ -368,18 +366,6 @@ export default function RedBlackTreeVisualiser() {
                             onClear={() => { algorithm.reset(); setSelectedAddress(null); }}
                             activeTab={activeTab}
                             onTabChange={setActiveTab}
-                            className="h-full"
-                        />
-                    </div>
-                );
-                break;
-            case 'pseudocode':
-                content = (
-                    <div className="h-[384px] w-full">
-                        <PseudocodePanel
-                            mode={pseudocodeMode}
-                            activeLineNumbers={activeLines}
-                            annotations={ANNOTATIONS[pseudocodeMode]}
                             className="h-full"
                         />
                     </div>

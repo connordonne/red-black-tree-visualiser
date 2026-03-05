@@ -1,21 +1,22 @@
 // src/components/PseudocodePanel.tsx
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, Terminal, Info, ArrowDownCircle } from 'lucide-react';
+import { Copy, Check, Terminal, ArrowDownCircle, Maximize2, Minimize2, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ALGORITHMS } from '@/lib/pseudocode';
+import type { DragControls } from 'framer-motion';
 
 export interface PseudocodePanelProps {
-    mode: 'insert' | 'delete' | 'find'; 
-    activeLineNumbers: number[]; 
+    mode: 'insert' | 'delete' | 'find';
+    activeLineNumbers: number[];
     annotations?: Record<number, string>;
     onCopy?: () => void;
     className?: string;
+    dragControls?: DragControls;
 }
-
 
 const highlightSyntax = (line: string) => {
     if (!line) return null;
@@ -53,50 +54,37 @@ const highlightSyntax = (line: string) => {
 export function PseudocodePanel({
                                     mode,
                                     activeLineNumbers = [],
-                                    annotations = {},
                                     onCopy,
-                                    className
+                                    className,
+                                    dragControls
                                 }: PseudocodePanelProps) {
     const [copied, setCopied] = useState(false);
     const [debugLine, setDebugLine] = useState<number | null>(null);
     const [autoScroll, setAutoScroll] = useState(true);
+    const [isMinimized, setIsMinimized] = useState(false);
 
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const lineRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
     const codeString = ALGORITHMS[mode] || "// Algorithm code not found.";
-    const lines = useMemo(() => codeString.split('\n'), [codeString]);
+    // Split on newline and optionally carriage return to prevent hidden characters
+    const lines = useMemo(() => codeString.split(/\r?\n/), [codeString]);
 
     const currentHighlights = useMemo(() => {
         return activeLineNumbers.length > 0 ? activeLineNumbers : (debugLine ? [debugLine] : []);
     }, [activeLineNumbers, debugLine]);
 
+    // Use native scrollIntoView for reliable auto-scrolling
     useEffect(() => {
-        if (autoScroll && currentHighlights.length > 0 && scrollAreaRef.current) {
+        if (autoScroll && currentHighlights.length > 0 && !isMinimized) {
             const firstActive = currentHighlights[0];
             const element = lineRefs.current[firstActive];
 
             if (element) {
-                const container = scrollAreaRef.current;
-                const elementTop = element.offsetTop;
-                const elementHeight = element.offsetHeight;
-                const containerHeight = container.clientHeight;
-                const scrollTop = container.scrollTop;
-
-                const isVisible = (
-                    elementTop >= scrollTop + 20 &&
-                    (elementTop + elementHeight) <= (scrollTop + containerHeight - 20)
-                );
-
-                if (!isVisible) {
-                    container.scrollTo({
-                        top: elementTop - (containerHeight / 2) + (elementHeight / 2),
-                        behavior: 'smooth'
-                    });
-                }
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-    }, [currentHighlights, mode, autoScroll]);
+    }, [currentHighlights, autoScroll, isMinimized]);
 
     useEffect(() => {
         setDebugLine(null);
@@ -110,6 +98,7 @@ export function PseudocodePanel({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (isMinimized) return;
         let nextLine = debugLine || activeLineNumbers[0] || 1;
         if (e.key === 'ArrowDown' || e.key === 'j') {
             e.preventDefault();
@@ -124,95 +113,129 @@ export function PseudocodePanel({
 
     return (
         <Card
-            className={cn("flex flex-col h-full overflow-hidden outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring", className)}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
+            className={cn(
+                "flex flex-col outline-none transition-all duration-300 bg-transparent border-none shadow-none pointer-events-none w-full",
+                isMinimized ? "h-auto" : "flex-1 min-h-0 overflow-hidden",
+                className
+            )}
+            tabIndex={-1}
         >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 bg-muted/50 border-b">
-                <div className="flex items-center gap-2">
-                    <Terminal className="size-4 text-muted-foreground" />
-                    <CardTitle className="text-sm font-medium uppercase tracking-wider">
-                        {mode} Algorithm
-                    </CardTitle>
-                    {activeLineNumbers.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 animate-pulse">
-                            Exec: Line {activeLineNumbers.join(', ')}
+            {/* Header / Grab Handle */}
+            <div
+                className={cn(
+                    "pointer-events-auto inline-flex flex-row items-center justify-between p-2 transition-colors rounded-xl mb-2 w-fit min-w-[200px] gap-6 group",
+                    dragControls ? "cursor-grab active:cursor-grabbing touch-none hover:bg-background/40 hover:backdrop-blur-sm" : ""
+                )}
+                onPointerDown={(e) => {
+                    if (dragControls) dragControls.start(e);
+                }}
+            >
+                <div className="flex items-center gap-2 pr-2">
+                    {dragControls && <GripHorizontal className="size-3.5 text-muted-foreground opacity-30 group-hover:opacity-80 transition-opacity shrink-0" />}
+                    <Terminal className="size-3.5 text-muted-foreground shrink-0 drop-shadow-sm" />
+                    <span className="text-xs font-bold uppercase tracking-wider shrink-0 text-foreground drop-shadow-sm">
+                        {mode}
+                    </span>
+                    {!isMinimized && activeLineNumbers.length > 0 && (
+                        <Badge variant="secondary" className="text-[9px] h-4 px-1 animate-pulse shrink-0 ml-1 shadow-sm">
+                            Exec: {activeLineNumbers.join(', ')}
                         </Badge>
                     )}
                 </div>
-                <div className="flex items-center gap-1">
-                    <Button 
-                        variant={autoScroll ? "secondary" : "ghost"} 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={() => setAutoScroll(!autoScroll)}
-                        title={autoScroll ? "Auto-scroll ON (Click to disable)" : "Auto-scroll OFF (Click to enable)"}
-                    >
-                        <ArrowDownCircle className={cn("size-3.5 transition-all", autoScroll ? "text-primary" : "text-muted-foreground opacity-50")} />
-                        <span className="sr-only">Toggle Auto-scroll</span>
-                    </Button>
 
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="Copy code">
-                        {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-                        <span className="sr-only">Copy</span>
+                <div className="flex items-center gap-0.5 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
+                    {!isMinimized && (
+                        <>
+                            <Button
+                                variant={autoScroll ? "secondary" : "ghost"}
+                                size="icon"
+                                className="h-6 w-6 bg-transparent"
+                                onClick={(e) => { e.stopPropagation(); setAutoScroll(!autoScroll); }}
+                                title={autoScroll ? "Auto-scroll ON (Click to disable)" : "Auto-scroll OFF (Click to enable)"}
+                            >
+                                <ArrowDownCircle className={cn("size-3 transition-all", autoScroll ? "text-primary" : "text-muted-foreground opacity-50")} />
+                                <span className="sr-only">Toggle Auto-scroll</span>
+                            </Button>
+
+                            <Button variant="ghost" size="icon" className="h-6 w-6 bg-transparent" onClick={(e) => { e.stopPropagation(); handleCopy(); }} title="Copy code">
+                                {copied ? <Check className="size-3 text-green-500" /> : <Copy className="size-3 drop-shadow-sm" />}
+                                <span className="sr-only">Copy</span>
+                            </Button>
+                        </>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 bg-transparent text-muted-foreground hover:text-foreground"
+                        onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }}
+                        title={isMinimized ? "Maximize Panel" : "Minimize Panel"}
+                    >
+                        {isMinimized ? <Maximize2 className="size-3 drop-shadow-sm" /> : <Minimize2 className="size-3 drop-shadow-sm" />}
+                        <span className="sr-only">Toggle Minimize</span>
                     </Button>
                 </div>
-            </CardHeader>
+            </div>
 
-            <CardContent className="p-0 flex-1 overflow-hidden relative bg-card font-mono text-xs md:text-sm">
+            {/* Code Lines Container */}
+            {!isMinimized && (
                 <div
                     ref={scrollAreaRef}
-                    className="h-full overflow-y-auto py-2 leading-6"
+                    className="flex-1 overflow-y-auto relative font-mono text-[11px] md:text-xs pointer-events-auto min-h-0 w-full scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    onKeyDown={handleKeyDown}
+                    tabIndex={0}
                 >
-                    {lines.map((lineContent, index) => {
-                        const lineNumber = index + 1;
-                        const isActive = currentHighlights.includes(lineNumber);
-                        const annotation = annotations[lineNumber];
+                    <div className="py-1 leading-5 flex flex-col items-start w-fit pointer-events-auto pb-4 pr-4">
+                        {lines.map((rawLineContent, index) => {
+                            // Trim trailing whitespace to prevent highlighting invisible blocks
+                            const lineContent = rawLineContent.trimEnd();
+                            const lineNumber = index + 1;
+                            const isActive = currentHighlights.includes(lineNumber);
 
-                        return (
-                            <div key={lineNumber} className="flex flex-col">
-                                <div
-                                    ref={(el: HTMLDivElement | null) => { lineRefs.current[lineNumber] = el; }}
-                                    className={cn(
-                                        "group flex w-full px-4 border-l-4 transition-colors duration-150",
-                                        isActive
-                                            ? "bg-primary/10 border-l-primary text-foreground"
-                                            : "border-l-transparent text-muted-foreground hover:bg-muted/30"
-                                    )}
-                                    title={isActive ? undefined : (annotation || undefined)}
-                                >
-                                    <span className={cn(
-                                        "inline-block w-8 mr-4 text-right select-none opacity-40 shrink-0",
-                                        isActive ? "text-primary font-bold opacity-100" : ""
-                                    )}>
-                                        {lineNumber}
-                                    </span>
+                            return (
+                                <div key={lineNumber} className="flex flex-col items-start max-w-full">
+                                    <div
+                                        ref={(el: HTMLDivElement | null) => { lineRefs.current[lineNumber] = el; }}
+                                        className={cn(
+                                            "group/line inline-flex items-center w-fit max-w-full px-2 md:px-3 border-l-2 transition-all duration-150 py-0.5",
+                                            isActive
+                                                ? "bg-primary/20 backdrop-blur-md border-l-primary text-foreground rounded-r-md shadow-sm"
+                                                : "border-l-transparent text-foreground/80 hover:bg-background/50 hover:backdrop-blur-sm hover:text-foreground rounded-r-md"
+                                        )}
+                                    >
+                                        <span className={cn(
+                                            "inline-block w-6 mr-2 text-right select-none opacity-40 shrink-0",
+                                            isActive ? "text-primary font-bold opacity-100" : ""
+                                        )}>
+                                            {lineNumber}
+                                        </span>
 
-                                    <span className={cn(
-                                        "whitespace-pre flex-1",
-                                        isActive ? "font-medium" : ""
-                                    )}>
-                                        {highlightSyntax(lineContent)}
-                                    </span>
-                                </div>
-
-                                {isActive && annotation && (
-                                    <div className="pl-16 pr-4 py-2 bg-primary/5 border-l-4 border-l-primary/50 animate-in slide-in-from-top-1 duration-200">
-                                        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded border shadow-sm">
-                                            <Info className="size-3.5 mt-0.5 text-primary shrink-0" />
-                                            <span className="leading-snug">
-                                                <span className="font-semibold text-primary/80 mr-1">Why:</span>
-                                                {annotation}
-                                            </span>
-                                        </div>
+                                        <span className={cn(
+                                            "whitespace-pre-wrap break-words drop-shadow-sm pr-2",
+                                            isActive ? "font-bold" : "font-medium"
+                                        )}>
+                                            {highlightSyntax(lineContent)}
+                                        </span>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                    <div className="h-8" />
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
-            </CardContent>
+            )}
+
+            {/* Minimized Status */}
+            {isMinimized && (
+                <div className="pointer-events-auto p-1.5 px-3 hover:bg-background/40 hover:backdrop-blur-sm transition-all font-mono text-[11px] md:text-xs bg-background/70 backdrop-blur-md border border-border/40 shadow-sm rounded-full inline-flex items-center w-fit ml-1 mt-1 max-w-full">
+                    {activeLineNumbers.length > 0 && lines[activeLineNumbers[0] - 1] ? (
+                        <div className="flex items-center gap-2 truncate">
+                            <span className="text-primary font-bold shrink-0 drop-shadow-sm">{activeLineNumbers[0]}</span>
+                            <span className="truncate font-medium drop-shadow-sm">{highlightSyntax(lines[activeLineNumbers[0] - 1].trimEnd())}</span>
+                        </div>
+                    ) : (
+                        <div className="text-muted-foreground italic truncate drop-shadow-sm">Waiting for operation...</div>
+                    )}
+                </div>
+            )}
         </Card>
     );
 }

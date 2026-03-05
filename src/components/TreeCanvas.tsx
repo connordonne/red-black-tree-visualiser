@@ -1,7 +1,7 @@
 // src/components/TreeCanvas.tsx
 
 import React, { useRef, useState, useLayoutEffect, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import * as d3 from 'd3';
 import { TreeNode, Color } from '@/core/RedBlackTree';
 import type { CanvasLabel, SearchFocus, DragPuzzleData } from '@/core/RedBlackTree';
@@ -9,6 +9,8 @@ import { useTreeLayout, type RBTHierarchyPointNode, type RBTHierarchyPointLink }
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize, Minimize2, GitCommitHorizontal, Info, XCircle } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { PseudocodePanel } from '@/components/PseudocodePanel';
+import { ANNOTATIONS } from '@/lib/pseudocode';
 
 interface TreeCanvasProps {
     root: TreeNode | null;
@@ -30,6 +32,9 @@ interface TreeCanvasProps {
     dragPuzzleData?: DragPuzzleData;
     onDragPuzzleComplete?: () => void;
     nodeRoles?: Record<number, string>;
+    showPseudocode?: boolean;
+    pseudocodeMode?: 'insert' | 'delete' | 'find';
+    activeLines?: number[];
 }
 
 const NODE_RADIUS = 22;
@@ -52,13 +57,17 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                                                    isRecolorActive,
                                                    dragPuzzleData,
                                                    onDragPuzzleComplete,
-                                                   nodeRoles
+                                                   nodeRoles,
+                                                   showPseudocode,
+                                                   pseudocodeMode,
+                                                   activeLines
                                                }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
     const gRef = useRef<SVGGElement>(null);
 
     const isViewCentered = useRef(false);
+    const dragControls = useDragControls();
 
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const zoomBehavior = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -347,6 +356,32 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
                             <XCircle className="size-4" />
                             {dragError}
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* --- PSEUDOCODE HUD --- */}
+            <AnimatePresence>
+                {showPseudocode && pseudocodeMode && (
+                    <motion.div
+                        drag
+                        dragControls={dragControls}
+                        dragListener={false}
+                        dragConstraints={containerRef}
+                        dragMomentum={false}
+                        className="absolute top-0 left-0 z-40 w-fit min-w-[280px] max-w-[90vw] md:max-w-[400px] pointer-events-none flex flex-col overflow-hidden"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ maxHeight: 'calc(100% - 16px)', transformOrigin: 'top left' }}
+                    >
+                        <PseudocodePanel
+                            mode={pseudocodeMode}
+                            activeLineNumbers={activeLines || []}
+                            annotations={ANNOTATIONS[pseudocodeMode]}
+                            dragControls={dragControls}
+                        />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -814,4 +849,3 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({
 };
 
 export default TreeCanvas;
-

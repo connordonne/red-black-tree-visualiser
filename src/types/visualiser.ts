@@ -1,6 +1,6 @@
 // src/types/visualiser.ts
 
-export type WidgetId = 'tree' | 'memory' | 'explanation' | 'player' | 'controls' | 'pseudocode';
+export type WidgetId = 'tree' | 'memory' | 'explanation' | 'player' | 'controls';
 
 export interface ViewState {
     showTree: boolean;
@@ -14,6 +14,6 @@ export interface VisualSettings {
     colorBlindMode: boolean;
     showAddresses: boolean;
     showNils: boolean;
-    showIsomorphic: boolean; 
+    showIsomorphic: boolean;
     tutorialMode: boolean;
 }

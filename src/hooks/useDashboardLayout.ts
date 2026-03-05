@@ -1,3 +1,5 @@
+// src/hooks/useDashboardLayout.ts
+
 import { useState } from 'react';
 import {
     useSensor,
@@ -21,7 +23,7 @@ interface LayoutState {
 
 const DEFAULT_LAYOUT: LayoutState = {
     main: ['tree', 'memory', 'player'],
-    sidebar: ['controls', 'explanation', 'pseudocode'],
+    sidebar: ['controls', 'explanation'],
 };
 
 export function useDashboardLayout() {
@@ -55,24 +57,16 @@ export function useDashboardLayout() {
         const overId = over.id as string;
 
         const activeContainer = findContainer(activeId);
-        // If over a container directly (empty space), or over an item
         const overContainer = (overId === 'main' || overId === 'sidebar')
             ? overId as keyof LayoutState
             : findContainer(overId);
 
-        if (!activeContainer || !overContainer || activeContainer === activeContainer) {
-            // We usually only handle cross-container movement in DragOver
-            // But strict dnd-kit implementation often handles all movement here for smoother preview
-        }
-        
         if (!activeContainer || !overContainer || activeContainer === overContainer) {
-             return;
+            return;
         }
 
         setColumns((prev) => {
-            //const activeItems = prev[activeContainer];
             const overItems = prev[overContainer];
-            //const activeIndex = activeItems.indexOf(activeId);
             const overIndex = (overId === 'main' || overId === 'sidebar')
                 ? overItems.length + 1
                 : overItems.indexOf(overId as WidgetId);
