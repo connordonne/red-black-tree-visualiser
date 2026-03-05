@@ -229,18 +229,6 @@ export function PseudocodePanel({
                                             {highlightSyntax(lineContent)}
                                         </span>
                                     </div>
-
-                                    {isActive && annotation && (
-                                        <div className="pl-10 pr-4 py-1.5 bg-primary/5 border-l-2 border-l-primary/50 animate-in slide-in-from-top-1 duration-200 w-fit">
-                                            <div className="flex items-start gap-2 text-xs text-muted-foreground bg-background/50 p-2 rounded border shadow-sm">
-                                                <Info className="size-3.5 mt-0.5 text-primary shrink-0"/>
-                                                <span className="leading-snug">
-                                                    <span className="font-semibold text-primary/80 mr-1">Why:</span>
-                                                    {annotation}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })}
