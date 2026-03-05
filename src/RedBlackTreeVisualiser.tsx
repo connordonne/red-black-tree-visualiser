@@ -15,7 +15,6 @@ import { MemoryGrid } from "@/components/MemoryGrid";
 import { NodeInspector } from "@/components/NodeInspector";
 import { ViewOptions } from "@/components/ViewOptions";
 import { SortableItem } from "@/components/SortableItem";
-import { PseudocodePanel } from "@/components/PseudocodePanel";
 
 // Hooks & Types
 import { useAlgorithmPlayer } from "@/hooks/useAlgorithmPlayer";
@@ -23,7 +22,6 @@ import { useDashboardLayout } from "@/hooks/useDashboardLayout";
 import { TreeNode, Color, analyzeTreeHealth } from "@/core/RedBlackTree";
 import type { WidgetId, ViewState, VisualSettings } from "@/types/visualiser";
 import { cn } from "@/lib/utils";
-import { ANNOTATIONS } from "@/lib/pseudocode";
 
 // Configuration
 const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdIkCdd6WXNjq6hFFK8U1Gc6wWRps3Z7NsZ2Qy4yHjZUAaKtg/viewform?usp=publish-editor";
@@ -69,8 +67,8 @@ export default function RedBlackTreeVisualiser() {
     const [hoveredAddress, setHoveredAddress] = useState<number | null>(null);
 
     // Interactive Code <-> Tree Link State
-    const [hoveredLine, setHoveredLine] = useState<number | null>(null);
-    const [hoveredNodeKey, setHoveredNodeKey] = useState<number | null>(null);
+    const [hoveredLine] = useState<number | null>(null);
+    const [, setHoveredNodeKey] = useState<number | null>(null);
 
     // Hardcoded logic maps pointing algorithm lines directly to the roles they affect
     const LINE_TO_ROLES: Record<string, Record<number, string[]>> = useMemo(() => ({
@@ -95,20 +93,9 @@ export default function RedBlackTreeVisualiser() {
         const rolesForLine = LINE_TO_ROLES[opType]?.[hoveredLine] || [];
 
         return Object.entries(algorithm.currentStepData.nodeRoles)
-            .filter(([_, role]) => rolesForLine.includes(role))
+            .filter(([, role]) => rolesForLine.includes(role))
             .map(([key]) => parseInt(key));
     }, [hoveredLine, algorithm.currentStepData, LINE_TO_ROLES]);
-
-    const glowingLines = useMemo(() => {
-        if (hoveredNodeKey === null || !algorithm.currentStepData.nodeRoles || !algorithm.currentStepData.operationType) return [];
-        const opType = algorithm.currentStepData.operationType;
-        const role = algorithm.currentStepData.nodeRoles[hoveredNodeKey];
-        if (!role) return [];
-
-        return Object.entries(LINE_TO_ROLES[opType] || {})
-            .filter(([_, rolesForLine]) => rolesForLine.includes(role))
-            .map(([line]) => parseInt(line));
-    }, [hoveredNodeKey, algorithm.currentStepData, LINE_TO_ROLES]);
 
     // --- Tree Resizing Logic ---
     const treeContainerRef = useRef<HTMLDivElement>(null);
@@ -413,20 +400,6 @@ export default function RedBlackTreeVisualiser() {
                             activeTab={activeTab}
                             onTabChange={setActiveTab}
                             className="h-full"
-                        />
-                    </div>
-                );
-                break;
-            case 'pseudocode':
-                content = (
-                    <div className="h-[384px] w-full">
-                        <PseudocodePanel
-                            mode={pseudocodeMode}
-                            activeLineNumbers={activeLines}
-                            annotations={ANNOTATIONS[pseudocodeMode]}
-                            className="h-full"
-                            onHoverLine={setHoveredLine}
-                            glowingLines={glowingLines}
                         />
                     </div>
                 );
