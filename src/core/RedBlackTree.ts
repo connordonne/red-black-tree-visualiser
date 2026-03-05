@@ -224,7 +224,7 @@ export class RedBlackTree {
         const nodesToMove = this.getSubtreeKeys(x);
         this.addStep(
             steps,
-            `Preparing Left Rotation around ${x.key}. Drag the highlighted nodes into their new logical positions.`,
+            `Preparing Left Rotation around ${x.key}.`,
             nodesToMove,
             lines,
             undefined,

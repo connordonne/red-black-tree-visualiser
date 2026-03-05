@@ -303,7 +303,7 @@ export default function RedBlackTreeVisualiser() {
                             <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                                 <div className="bg-primary text-primary-foreground px-6 py-2.5 rounded-full shadow-2xl text-sm font-bold animate-in slide-in-from-top-4 flex items-center gap-3 border border-primary/20 ring-4 ring-primary/10">
                                     <Hand className="size-4 animate-bounce" />
-                                    Construct the Rotation: Drag the nodes into their correct positions
+                                    Drag the nodes into their correct positions
                                 </div>
                             </div>
                         )}
