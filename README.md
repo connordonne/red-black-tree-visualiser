@@ -4,30 +4,30 @@ An interactive, web-based visualiser for Red-Black Trees, designed to help stude
 
 ## Features
 
-### 🎓 Learning & Interactive Mode (New)
+### Learning & Interactive Mode 
 - **Interactive Recolouring**: Pauses during critical operations to ask users to manually fix "Red-Red" conflicts or recolour nodes based on RBT properties.
 - **Drag-and-Drop Rotations**: Interactive rotation puzzles requiring users to drag subtrees into their correct logical positions to complete Left and Right rotations.
 - **Real-Time Health Monitor**: Live validation of Red-Black Tree rules (e.g., Root property, Red-Red conflicts, Black-Height consistency) with dynamic health scores and warnings.
 
-### 🌳 Core Tree Operations
+### Core Tree Operations
 - **Insert & Delete**: Fully animated operations with detailed, granular steps covering all edge cases, recolouring, and fixup rotations.
 - **Find/Search**: Step-by-step traversal highlighting the search path and target comparisons.
 - **Bulk Operations**: Rapidly insert multiple random nodes to test complex tree structures.
 
-### 🎨 Advanced Visualisation
+### Advanced Visualisation
 - **D3 & Framer Motion Canvas**: Fluid, physics-based animations for node movements, link drawing, and layout recalculations.
 - **2-3-4 Isomorphic View**: Toggleable overlay that groups nodes to visually demonstrate the equivalence between Red-Black Trees and 2-3-4 B-trees.
 - **Node Highlighting & Linking**: Active pseudocode lines dynamically highlight their corresponding specific nodes (e.g., Parent, Uncle, Grandparent) in the tree.
-- **NIL Node Toggling**: Show or hide sentinel NIL leaves to better visualize Black-Height properties.
+- **NIL Node Toggling**: Show or hide sentinel NIL leaves to better visualise Black-Height properties.
 
-### 💻 Pseudocode & Memory Inspection
+### Pseudocode & Memory Inspection
 - **Floating Pseudocode HUD**: A draggable, auto-scrolling pseudocode panel with syntax highlighting and line-by-line annotations.
 - **Memory Grid**: A 256-byte visual representation of the heap memory map, showing node allocations and pointers.
 - **Struct Inspector**: Click any node (or memory address) to view its raw C-style struct data (address, key, colour, and parent/left/right pointers).
 
-### ⚙️ User Experience & Accessibility
+### User Experience & Accessibility
 - **Customisable Dashboard**: Drag-and-drop widget layout using `@dnd-kit`.
-- **Accessibility Options**: Native Color-Blind mode (uses dashed patterns for red nodes) and memory address toggling.
+- **Accessibility Options**: Native Colour-Blind mode (uses dashed patterns for red nodes) and memory address toggling.
 - **Playback Controls**: Play, pause, step forward/backward, and adjust animation speed.
 - **Dark/Light Theme**: Fully responsive "Modern IDE" (Dark) and "Digital Textbook" (Light) themes.
 
