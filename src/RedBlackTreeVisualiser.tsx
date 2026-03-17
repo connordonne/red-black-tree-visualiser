@@ -24,7 +24,7 @@ import type { WidgetId, ViewState, VisualSettings } from "@/types/visualiser";
 import { cn } from "@/lib/utils";
 
 // Configuration
-const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdIkCdd6WXNjq6hFFK8U1Gc6wWRps3Z7NsZ2Qy4yHjZUAaKtg/viewform?usp=publish-editor";
+const FEEDBACK_URL = "https://forms.gle/AF455w2d6PHUGnR5A";
 
 export default function RedBlackTreeVisualiser() {
     // --- View & Visual Options ---

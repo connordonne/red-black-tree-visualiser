@@ -1,31 +1,37 @@
 # Red-Black Tree Visualiser
 
-An interactive, web-based visualiser for Red-Black Trees, designed to help students and developers understand the complex operations and rotations that maintain tree balance. This educational tool provides step-by-step animations, pseudocode explanations, and memory representations.
+An interactive, web-based visualiser for Red-Black Trees, designed to help students and developers deeply understand the complex operations, recolouring rules, and rotations that maintain tree balance. This educational tool provides step-by-step animations, interactive learning puzzles, live property validation, and memory representations.
 
 ## Features
 
-### Core Functionality
-- **Interactive Tree Operations**
-  - Insert nodes with animated, step-by-step visualisation
-  - Delete nodes with detailed rebalancing operations
-  - Find/search for specific nodes in the tree
-  - Bulk insert random nodes for testing
+### Learning & Interactive Mode 
+- **Interactive Recolouring**: Pauses during critical operations to ask users to manually fix "Red-Red" conflicts or recolour nodes based on RBT properties.
+- **Drag-and-Drop Rotations**: Interactive rotation puzzles requiring users to drag subtrees into their correct logical positions to complete Left and Right rotations.
+- **Real-Time Health Monitor**: Live validation of Red-Black Tree rules (e.g., Root property, Red-Red conflicts, Black-Height consistency) with dynamic health scores and warnings.
 
-### Visualisation Features
-- **Step-by-Step Animation**: Navigate through each operation using playback controls
-- **Tree Canvas**: Interactive D3-powered tree visualisation with colour-coded nodes (red/black)
-- **Memory Grid**: Visual representation of node memory addresses (0–255)
-- **Pseudocode Panel**: Synchronised pseudocode highlighting for each operation step
-- **Node Inspector**: Detailed view of selected node properties (key, colour, parent, children, memory address)
-- **Explanation Box**: Real-time descriptions of what is happening at each step
+### Core Tree Operations
+- **Insert & Delete**: Fully animated operations with detailed, granular steps covering all edge cases, recolouring, and fixup rotations.
+- **Find/Search**: Step-by-step traversal highlighting the search path and target comparisons.
+- **Bulk Operations**: Rapidly insert multiple random nodes to test complex tree structures.
 
-### User Experience
-- **Drag & Drop Panels**: Customisable layout with sortable widgets
-- **Dark/Light Mode**: Theme toggle for comfortable viewing
-- **Keyboard Controls**: Navigate steps using arrow keys, spacebar to play/pause
-- **Player Controls**: Play, pause, step forwards/backwards, jump to start/end
-- **Adjustable Speed**: Control animation playback speed
-- **View Options**: Toggle visibility of the memory grid, pseudocode, and explanations
+### Advanced Visualisation
+- **D3 & Framer Motion Canvas**: Fluid, physics-based animations for node movements, link drawing, and layout recalculations.
+- **2-3-4 Isomorphic View**: Toggleable overlay that groups nodes to visually demonstrate the equivalence between Red-Black Trees and 2-3-4 B-trees.
+- **Node Highlighting & Linking**: Active pseudocode lines dynamically highlight their corresponding specific nodes (e.g., Parent, Uncle, Grandparent) in the tree.
+- **NIL Node Toggling**: Show or hide sentinel NIL leaves to better visualise Black-Height properties.
+
+### Pseudocode & Memory Inspection
+- **Floating Pseudocode HUD**: A draggable, auto-scrolling pseudocode panel with syntax highlighting and line-by-line annotations.
+- **Memory Grid**: A 256-byte visual representation of the heap memory map, showing node allocations and pointers.
+- **Struct Inspector**: Click any node (or memory address) to view its raw C-style struct data (address, key, colour, and parent/left/right pointers).
+
+### User Experience & Accessibility
+- **Customisable Dashboard**: Drag-and-drop widget layout using `@dnd-kit`.
+- **Accessibility Options**: Native Colour-Blind mode (uses dashed patterns for red nodes) and memory address toggling.
+- **Playback Controls**: Play, pause, step forward/backward, and adjust animation speed.
+- **Dark/Light Theme**: Fully responsive "Modern IDE" (Dark) and "Digital Textbook" (Light) themes.
+
+---
 
 ## Tech Stack
 
@@ -35,112 +41,109 @@ An interactive, web-based visualiser for Red-Black Trees, designed to help stude
 - **Vite** – Fast build tool and development server
 
 ### Visualisation & Animation
-- **D3.js** – Tree rendering and SVG manipulation
-- **Framer Motion** – Smooth animations and transitions
-- **@dnd-kit** – Drag-and-drop functionality for panels
+- **D3.js** – Tree layout math and bounding calculations
+- **Framer Motion** – Smooth SVG animations, spring physics, and drag gestures
+- **@dnd-kit/core & sortable** – Accessible drag-and-drop functionality for dashboard panels
 
 ### UI Components & Styling
-- **Tailwind CSS** – Utility-first CSS framework
-- **Radix UI** – Accessible UI primitives (tabs, switches, labels, etc.)
+- **Tailwind CSS (v4)** – Utility-first CSS framework
+- **Radix UI** – Accessible UI primitives (tabs, switches, labels, sliders)
 - **Lucide React** – Icon library
 - **class-variance-authority** – Component variant management
 
-### Development Tools
-- **ESLint** – Code linting
-- **Jest** – Testing framework
-- **PostCSS** – CSS processing
-
-## Prerequisites
-
-Before running this project, ensure you have:
-- **Node.js** (version 18 or higher)
-- **npm** or **yarn** package manager
+---
 
 ## Local Setup
 
-1. **Clone the repository**
+### Prerequisites
+- **Node.js** (version 18 or higher)
+- **npm** or **yarn** package manager
 
-    git clone https://github.com/connordonne/red-black-tree-visualiser.git  
-    cd red-black-tree-visualiser
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/connordonne/red-black-tree-visualiser.git](https://github.com/connordonne/red-black-tree-visualiser.git)  
+   cd red-black-tree-visualiser
+   ```
 
 2. **Install dependencies**
-
-    npm install
+   ```bash
+   npm install
+   ```
 
 3. **Start the development server**
-
-    npm run dev
+   ```bash
+   npm run dev
+   ```
 
 4. **Open your browser**
+   Navigate to `http://localhost:5173` (or the port shown in your terminal)
 
-    Navigate to http://localhost:5173 (or the port shown in your terminal)
+---
 
 ## Development Commands
 
-    # Start development server with hot module replacement
-    npm run dev
+```bash
+# Start development server with hot module replacement
+npm run dev
 
-    # Build for production
-    npm run build
+# Build for production
+npm run build
 
-    # Preview production build locally
-    npm run preview
+# Preview production build locally
+npm run preview
 
-    # Run the linter
-    npm run lint
+# Run the linter
+npm run lint
 
-    # Run tests
-    npm run test
+# Run tests
+npm run test
+```
+
+---
 
 ## Project Structure
 
-    red-black-tree-visualiser/
-    ├── public/                 # Static assets
-    │   └── uofg-crest.png     # University of Glasgow branding
-    ├── src/
-    │   ├── components/        # React components
-    │   │   ├── Controls.tsx           # Operation input controls
-    │   │   ├── TreeCanvas.tsx         # D3 tree visualisation
-    │   │   ├── PlayerControls.tsx     # Animation playback controls
-    │   │   ├── PseudocodePanel.tsx    # Code explanation panel
-    │   │   ├── MemoryGrid.tsx         # Memory address grid
-    │   │   ├── NodeInspector.tsx      # Selected node details
-    │   │   ├── ExplanationBox.tsx     # Step descriptions
-    │   │   ├── ViewOptions.tsx        # UI configuration
-    │   │   └── ui/                    # Reusable UI components
-    │   ├── core/
-    │   │   └── RedBlackTree.ts        # Red-Black Tree implementation
-    │   ├── hooks/             # Custom React hooks
-    │   ├── lib/               # Utility functions and pseudocode data
-    │   ├── App.tsx            # Main application component
-    │   ├── RedBlackTreeVisualiser.tsx # Main visualiser component
-    │   └── main.tsx           # Application entry point
-    ├── index.html             # HTML entry point
-    ├── package.json           # Project dependencies and scripts
-    ├── vite.config.ts         # Vite configuration
-    ├── tsconfig.json          # TypeScript configuration
-    └── tailwind.config.cjs    # Tailwind CSS configuration
+```text
+red-black-tree-visualiser/
+├── public/                 # Static assets (University branding)
+├── src/
+│   ├── components/         # React components
+│   │   ├── ui/             # Reusable UI primitives (Radix/Tailwind)
+│   │   ├── Controls.tsx    # Operation input controls
+│   │   ├── TreeCanvas.tsx  # D3/Framer Motion tree SVG rendering
+│   │   ├── PlayerControls.tsx # Animation playback scrubber & buttons
+│   │   ├── PseudocodePanel.tsx# Draggable code HUD
+│   │   ├── MemoryGrid.tsx  # Memory allocation visualisation
+│   │   ├── NodeInspector.tsx # Node struct details
+│   │   ├── ExplanationBox.tsx # Step descriptions & Health validation
+│   │   ├── ViewOptions.tsx # Accessibility & Display toggles
+│   │   └── HealthBar.tsx   # Visual indicator for RBT rule violations
+│   ├── core/
+│   │   └── RedBlackTree.ts # Pure TypeScript RBT implementation & logic
+│   ├── hooks/              # Custom React hooks (Player, Layout, D3 Layout)
+│   ├── lib/                # Utility functions and pseudocode text
+│   ├── types/              # TypeScript interfaces
+│   ├── App.tsx             # Main application wrapper
+│   └── main.tsx            # Application entry point
+├── index.html              
+├── package.json            
+├── vite.config.ts          
+└── tailwind.config.cjs     
+```
 
-## How It Works
-
-1. **Select an Operation**: Choose insert, delete, or find from the controls panel
-2. **Enter a Value**: Provide the node key you wish to operate on
-3. **Watch the Animation**: The visualiser steps through the operation, displaying:
-   - Tree structure changes with highlighted nodes
-   - Pseudocode execution with line highlighting
-   - Memory address representations
-   - Detailed explanations of each step
-4. **Control Playback**: Use the player controls to navigate, pause, or adjust speed
-5. **Inspect Nodes**: Click on nodes in the memory grid to view detailed information
+---
 
 ## Educational Value
 
-This visualiser is particularly useful for:
-- Computer Science students learning about balanced binary search trees
-- Understanding the complex rotation and recolouring operations in Red-Black Trees
-- Visualising how tree balance is maintained during insertions and deletions
-- Comparing theoretical algorithms with practical implementations
-- Debugging and analysing Red-Black Tree behaviour
+This visualiser goes beyond simple animation by actively engaging the user. It is particularly useful for:
+- **Computer Science Students**: Learning balanced binary search trees through active participation rather than passive watching.
+- **Visualising 2-3-4 Equivalency**: Bridging the gap between B-trees and Red-Black Trees using the Isomorphic view.
+- **Understanding Memory**: Mapping high-level tree concepts to low-level memory addresses and pointers.
+- **Debugging Algorithms**: Testing edge cases in deletion and insertion fixups line-by-line.
+
+---
 
 ## Licence
 
@@ -148,5 +151,5 @@ This project is developed as an educational tool for the University of Glasgow.
 
 ## Acknowledgements
 
-- University of Glasgow School of Computing Science  
-- Built with modern web technologies for optimal performance and user experience
+- **University of Glasgow School of Computing Science**
+- Built with modern web technologies for optimal performance and user experience.
